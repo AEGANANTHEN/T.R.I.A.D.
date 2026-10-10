@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}T.R.I.A.D. - Telecom Records and Intelligence Analysis Dashboard{% endblock %}</title>
+  <meta name="description" content="Enterprise-grade T.R.I.A.D. - Telecom Records and Intelligence Analysis Dashboard for telecom forensics and law enforcement." />
+
+  <!-- ── Tailwind CSS ─────────────────────────────────────────────── -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'cyber-bg':     '#0b0f19',
+            'cyber-surface':'#0f172a',
+            'cyber-card':   '#111827',
+            'cyber-border': '#1e293b',
+            'cyber-cyan':   '#38bdf8',
+            'cyber-emerald':'#10b981',
+            'cyber-rose':   '#f43f5e',
+            'cyber-amber':  '#f59e0b',
+            'cyber-purple': '#818cf8',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          },
+          backgroundImage: {
+            'grid-pattern': "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%231e293b' fill-opacity='0.4'%3E%3Cpath d='M0 0h40v1H0zM0 0v40h1V0z'/%3E%3C/g%3E%3C/svg%3E\")",
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- ── Google Fonts ─────────────────────────────────────────────── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- ── Lucide Icons ─────────────────────────────────────────────── -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- ── Chart.js ─────────────────────────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- ── Vis.js Network ───────────────────────────────────────────── -->
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+  <link href="https://unpkg.com/vis-network@9.1.9/styles/vis-network.min.css" rel="stylesheet" />
+
+  <!-- ── Leaflet.js ───────────────────────────────────────────────── -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- ── Leaflet Plugins ──────────────────────────────────────────── -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- ── DataTables ───────────────────────────────────────────────── -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css" />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+  <!-- ── Custom Styles ────────────────────────────────────────────── -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}" />
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-cyber-bg text-slate-300 font-sans antialiased min-h-screen flex">
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SIDEBAR                                                        -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar-nav w-16 lg:w-60 flex-shrink-0 bg-cyber-surface border-r border-cyber-border flex flex-col fixed h-full z-50 transition-all duration-300">
+
+    <!-- Logo -->
+    <a href="{{ url_for('index') }}" class="flex items-center gap-3 px-4 py-5 border-b border-cyber-border hover:bg-slate-800/40 transition-colors">
+      <div class="flex-shrink-0 w-8 h-8 bg-cyber-cyan/20 border border-cyber-cyan/40 rounded-lg flex items-center justify-center">
+        <i data-lucide="shield-alert" class="w-4 h-4 text-cyber-cyan"></i>
+      </div>
+      <div class="hidden lg:block">
+        <p class="text-xs font-bold text-cyber-cyan tracking-widest uppercase">T.R.I.A.D.</p>
+        <p class="text-[10px] text-slate-500 tracking-wider">Intel Platform v2.0</p>
+      </div>
+    </a>
+
+    <!-- Nav Items -->
+    <nav class="flex-1 py-4 space-y-1 px-2">
+      <!-- 1. Upload CDR -->
+      <a href="{{ url_for('index') }}"
+         class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 group {% if request.endpoint == 'index' and request.args.get('tab') != 'multi' %}active{% endif %}"
+         id="nav-upload">
+        <i data-lucide="upload-cloud" class="w-4 h-4 flex-shrink-0 group-hover:text-cyber-cyan transition-colors"></i>
+        <span class="hidden lg:block text-sm font-medium">Upload CDR</span>
+      </a>
+
+      <!-- 2. Dashboard -->
+      {% set dash_url = url_for('dashboard', session_id=session_id) if session_id else url_for('route_dashboard') %}
+      <a href="{{ dash_url }}"
+         onclick="handleNavClick(event, 'dashboard')"
+         class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 group {% if request.endpoint == 'dashboard' %}active{% endif %}"
+         id="nav-dashboard">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 flex-shrink-0 group-hover:text-cyber-cyan transition-colors"></i>
+        <span class="hidden lg:block text-sm font-medium">Dashboard</span>
+      </a>
+
+      <!-- 3. Link Analysis -->
+      {% set link_url = (url_for('dashboard', session_id=session_id) + '#section-link-analysis') if session_id else url_for('route_link_analysis') %}
+      <a href="{{ link_url }}"
+         onclick="handleNavClick(event, 'link-analysis')"
+         class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 group"
+         id="nav-link-analysis">
+        <i data-lucide="git-fork" class="w-4 h-4 flex-shrink-0 group-hover:text-cyber-cyan transition-colors"></i>
+        <span class="hidden lg:block text-sm font-medium">Link Analysis</span>
+      </a>
+
+      <!-- 4. Geo Tracking -->
+      {% set geo_url = (url_for('dashboard', session_id=session_id) + '#section-geo-tracking') if session_id else url_for('route_geo_tracking') %}
+      <a href="{{ geo_url }}"
+         onclick="handleNavClick(event, 'geo-tracking')"
+         class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 group"
+         id="nav-geo-tracking">
+        <i data-lucide="map-pin" class="w-4 h-4 flex-shrink-0 group-hover:text-cyber-cyan transition-colors"></i>
+        <span class="hidden lg:block text-sm font-medium">Geo Tracking</span>
+      </a>
+
+      <!-- 5. Cross-Match -->
+      {% set cross_url = url_for('cross_match_view', session_id=session_id) if request.endpoint == 'cross_match_view' else url_for('index', tab='multi') %}
+      <a href="{{ cross_url }}"
+         class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 group {% if request.endpoint == 'cross_match_view' or request.args.get('tab') == 'multi' %}active{% endif %}"
+         id="nav-cross-match">
+        <i data-lucide="users" class="w-4 h-4 flex-shrink-0 group-hover:text-cyber-cyan transition-colors"></i>
+        <span class="hidden lg:block text-sm font-medium">Cross-Match</span>
+      </a>
+
+      <!-- 6. Investigation History (NEW) -->
+      <a href="{{ url_for('history_view') }}"
+         class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 group {% if request.endpoint == 'history_view' %}active{% endif %}"
+         id="nav-history">
+        <i data-lucide="history" class="w-4 h-4 flex-shrink-0 group-hover:text-cyber-cyan transition-colors"></i>
+        <span class="hidden lg:block text-sm font-medium">History</span>
+      </a>
+    </nav>
+
+    <!-- System Status -->
+    <div class="p-3 border-t border-cyber-border hidden lg:block">
+      <div class="bg-cyber-card rounded-lg p-3 border border-cyber-border">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="beacon beacon-green"></div>
+          <span class="text-[10px] text-slate-400 font-mono uppercase tracking-wider">System Active</span>
+        </div>
+        <div class="text-[10px] text-slate-600 font-mono">CDR Engine: Online</div>
+        <div class="text-[10px] text-slate-600 font-mono">Forensic DB: Ready</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- MAIN CONTENT                                                   -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="flex-1 flex flex-col ml-16 lg:ml-60 min-h-screen">
+
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-40 bg-cyber-surface/80 backdrop-blur-sm border-b border-cyber-border px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        {% block breadcrumb %}
+        <span class="text-slate-600">/</span>
+        <span class="text-sm text-slate-400 font-mono">{% block page_title %}Overview{% endblock %}</span>
+        {% endblock %}
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Live clock -->
+        <div class="text-xs font-mono text-slate-500 hidden sm:block" id="live-clock"></div>
+
+        <!-- History button shortcut in header -->
+        <a href="{{ url_for('history_view') }}" class="px-2.5 py-1 bg-cyber-card border border-cyber-border rounded text-xs text-slate-400 hover:text-cyber-cyan hover:border-cyber-cyan/40 transition-colors flex items-center gap-1.5 font-mono">
+          <i data-lucide="history" class="w-3.5 h-3.5 text-cyber-cyan"></i>
+          <span class="hidden sm:inline">Cases</span>
+        </a>
+
+        <!-- Alert indicator -->
+        <div class="flex items-center gap-1.5 px-2 py-1 bg-cyber-rose/10 border border-cyber-rose/30 rounded text-cyber-rose text-xs font-mono hidden" id="alert-indicator">
+          <div class="beacon beacon-red"></div>
+          <span id="alert-count">0</span> Alerts
+        </div>
+        <div class="w-7 h-7 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center">
+          <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="px-6 pt-4 space-y-2">
+          {% for category, message in messages %}
+            <div class="flex items-center gap-3 p-3 rounded-lg border
+              {% if category == 'error' %}bg-cyber-rose/10 border-cyber-rose/30 text-cyber-rose
+              {% elif category == 'info' %}bg-cyber-cyan/10 border-cyber-cyan/30 text-cyber-cyan
+              {% else %}bg-cyber-emerald/10 border-cyber-emerald/30 text-cyber-emerald{% endif %}
+              text-sm" role="alert">
+              <i data-lucide="{% if category == 'error' %}alert-circle{% elif category == 'info' %}info{% else %}check-circle{% endif %}" class="w-4 h-4 flex-shrink-0"></i>
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-cyber-border px-6 py-3 flex items-center justify-between">
+      <span class="text-xs text-slate-600 font-mono">T.R.I.A.D. - Telecom Records and Intelligence Analysis Dashboard © 2024 — Law Enforcement Grade</span>
+      <div class="flex items-center gap-4 text-xs text-slate-600 font-mono">
+        <span>Engine: Python/Flask</span>
+        <span>•</span>
+        <span>Vis.js + Leaflet.js + Chart.js</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ── Global Scripts ────────────────────────────────────────────── -->
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Live clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent =
+        now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // In-page smooth scroll & highlight handler for sidebar
+    function handleNavClick(e, targetType) {
+      if (targetType === 'link-analysis') {
+        const el = document.getElementById('section-link-analysis');
+        if (el) {
+          e.preventDefault();
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          highlightElement(el);
+          if (typeof fitGraph === 'function') setTimeout(fitGraph, 400);
+        }
+      } else if (targetType === 'geo-tracking') {
+        const el = document.getElementById('section-geo-tracking');
+        if (el) {
+          e.preventDefault();
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          highlightElement(el);
+          if (typeof leafletMap !== 'undefined' && leafletMap) {
+            setTimeout(() => leafletMap.invalidateSize(), 300);
+          }
+        }
+      } else if (targetType === 'dashboard') {
+        const el = document.getElementById('section-dashboard');
+        if (el) {
+          e.preventDefault();
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+
+    function highlightElement(el) {
+      el.classList.add('ring-2', 'ring-cyber-cyan', 'shadow-lg', 'shadow-cyber-cyan/20');
+      setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-cyber-cyan', 'shadow-lg', 'shadow-cyber-cyan/20');
+      }, 1500);
+    }
+
+    // Chart.js global defaults
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = '#1e293b';
+    Chart.defaults.backgroundColor = 'rgba(56, 189, 248, 0.1)';
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+    Chart.defaults.font.size = 11;
+    Chart.defaults.plugins.tooltip.backgroundColor = '#0f172a';
+    Chart.defaults.plugins.tooltip.borderColor = '#1e293b';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.titleColor = '#38bdf8';
+    Chart.defaults.plugins.tooltip.bodyColor = '#cbd5e1';
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.legend.labels.color = '#94a3b8';
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

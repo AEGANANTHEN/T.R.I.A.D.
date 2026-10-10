@@ -1,0 +1,338 @@
+{% extends "layout.html" %}
+{% set session_id = none %}
+
+{% block title %}Evidence Vault — Cases | T.R.I.A.D.{% endblock %}
+{% block page_title %}Evidence Vault — Case Command Center{% endblock %}
+
+{% block breadcrumb %}
+  <span class="text-slate-600">/</span>
+  <a href="{{ url_for('dems.cases_list') }}" class="text-sm text-sky-400 font-mono hover:text-sky-300">dems</a>
+  <span class="text-slate-600">/</span>
+  <span class="text-sm text-slate-400 font-mono">cases</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  @keyframes fadeSlideIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .case-card { animation: fadeSlideIn .35s ease both; }
+  .case-card:nth-child(2){animation-delay:.05s} .case-card:nth-child(3){animation-delay:.1s}
+  .case-card:nth-child(4){animation-delay:.15s} .case-card:nth-child(5){animation-delay:.2s}
+  .priority-critical { border-left: 3px solid #ef4444; }
+  .priority-high      { border-left: 3px solid #f59e0b; }
+  .priority-medium    { border-left: 3px solid #0ea5e9; }
+  .priority-low       { border-left: 3px solid #475569; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- ── PAGE HEADER ─────────────────────────────────────────────────────── -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse"></div>
+        <span class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Evidence Vault Online</span>
+      </div>
+      <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+        <i data-lucide="shield" class="w-6 h-6 text-sky-400"></i>
+        Case Command Center
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Logged in as <span class="text-sky-400 font-mono">{{ dems_user.username }}</span>
+        <span class="ml-2 px-1.5 py-0.5 text-[10px] rounded border
+          {% if dems_user.role.value == 'Admin' %}border-rose-500/40 bg-rose-500/10 text-rose-400
+          {% elif dems_user.role.value == 'Lead Investigator' %}border-sky-500/40 bg-sky-500/10 text-sky-400
+          {% elif dems_user.role.value == 'Forensic Analyst' %}border-emerald-500/40 bg-emerald-500/10 text-emerald-400
+          {% else %}border-slate-500/40 bg-slate-500/10 text-slate-400{% endif %} font-mono uppercase tracking-wider">
+          {{ dems_user.role.value }}
+        </span>
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if dems_user.has_permission('create_case') %}
+      <button onclick="document.getElementById('newCaseModal').classList.remove('hidden')"
+        class="flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg shadow-sky-900/30">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        New Case
+      </button>
+      {% endif %}
+      <a href="{{ url_for('dems.logout') }}"
+        class="flex items-center gap-2 px-3 py-2.5 bg-cyber-card border border-cyber-border hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-lg text-sm transition-all duration-200">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">Sign Out</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── STATS BAR ───────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% set stat_items = [
+      ('folder-open', 'Total Cases', stats.total, 'text-sky-400', 'border-sky-500/20 bg-sky-500/5'),
+      ('activity', 'Active Cases', stats.active, 'text-emerald-400', 'border-emerald-500/20 bg-emerald-500/5'),
+      ('alert-triangle', 'Critical Priority', stats.critical, 'text-rose-400', 'border-rose-500/20 bg-rose-500/5'),
+      ('database', 'Evidence Items', stats.evidence, 'text-amber-400', 'border-amber-500/20 bg-amber-500/5'),
+    ] %}
+    {% for icon, label, value, color, bg in stat_items %}
+    <div class="border {{ bg }} {{ color }} rounded-xl p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-current/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="{{ icon }}" class="w-5 h-5 {{ color }}"></i>
+      </div>
+      <div>
+        <p class="text-2xl font-bold text-white">{{ value }}</p>
+        <p class="text-xs text-slate-500 font-mono">{{ label }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── FILTERS & SEARCH ────────────────────────────────────────────────── -->
+  <div class="bg-cyber-card border border-cyber-border rounded-xl p-4">
+    <form method="GET" action="{{ url_for('dems.cases_list') }}" class="flex flex-col sm:flex-row gap-3">
+      <div class="flex-1 relative">
+        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+        <input type="text" name="q" value="{{ search }}" placeholder="Search case number, title, jurisdiction…"
+          class="w-full pl-9 pr-4 py-2 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-sky-500/50 transition-colors font-mono" />
+      </div>
+      <select name="status" class="px-3 py-2 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-sky-500/50 font-mono">
+        <option value="">All Statuses</option>
+        {% for s in CaseStatus %}
+        <option value="{{ s.value }}" {% if filter_status == s.value %}selected{% endif %}>{{ s.value }}</option>
+        {% endfor %}
+      </select>
+      <select name="priority" class="px-3 py-2 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-sky-500/50 font-mono">
+        <option value="">All Priorities</option>
+        {% for p in CasePriority %}
+        <option value="{{ p.value }}" {% if filter_priority == p.value %}selected{% endif %}>{{ p.value }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="px-4 py-2 bg-sky-600/20 border border-sky-500/30 text-sky-400 rounded-lg text-sm hover:bg-sky-600/30 transition-colors font-mono">
+        Filter
+      </button>
+      {% if search or filter_status or filter_priority %}
+      <a href="{{ url_for('dems.cases_list') }}" class="px-4 py-2 bg-cyber-surface border border-cyber-border text-slate-400 rounded-lg text-sm hover:text-slate-300 transition-colors font-mono flex items-center gap-1.5">
+        <i data-lucide="x" class="w-3.5 h-3.5"></i> Clear
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- ── CASES GRID ──────────────────────────────────────────────────────── -->
+  {% if cases %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+    {% for case in cases %}
+    {% set priority_class = {
+      'Critical': 'priority-critical',
+      'High': 'priority-high',
+      'Medium': 'priority-medium',
+      'Low': 'priority-low'
+    }.get(case.priority.value, 'priority-low') %}
+    {% set status_colors = {
+      'Open': 'text-sky-400 bg-sky-500/10 border-sky-500/30',
+      'Active': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      'Draft': 'text-slate-400 bg-slate-500/10 border-slate-500/30',
+      'Suspended': 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+      'Court Ready': 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+      'Closed': 'text-slate-500 bg-slate-800/50 border-slate-700',
+      'Archived': 'text-slate-600 bg-slate-900/50 border-slate-800',
+    }.get(case.status.value, 'text-slate-400 bg-slate-500/10 border-slate-500/30') %}
+    {% set priority_badge = {
+      'Critical': 'text-rose-400 bg-rose-500/10 border-rose-500/30',
+      'High': 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+      'Medium': 'text-sky-400 bg-sky-500/10 border-sky-500/30',
+      'Low': 'text-slate-400 bg-slate-500/10 border-slate-500/30',
+    }.get(case.priority.value, '') %}
+
+    <a href="{{ url_for('dems.case_detail', case_id=case.id) }}"
+       class="case-card block bg-cyber-card border border-cyber-border {{ priority_class }} rounded-xl p-5 hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-900/20 transition-all duration-200 group">
+
+      <!-- Card Header -->
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-[10px] font-mono text-slate-500 tracking-wider">{{ case.case_number }}</span>
+            <span class="px-1.5 py-0.5 text-[10px] rounded border font-mono uppercase tracking-wider {{ priority_badge }}">
+              {{ case.priority.value }}
+            </span>
+          </div>
+          <h3 class="text-sm font-semibold text-white group-hover:text-sky-300 transition-colors truncate">
+            {{ case.title }}
+          </h3>
+        </div>
+        <span class="flex-shrink-0 px-2 py-0.5 text-[10px] rounded-full border font-mono {{ status_colors }}">
+          {{ case.status.value }}
+        </span>
+      </div>
+
+      <!-- Case Meta -->
+      <div class="space-y-1.5 mb-3">
+        {% if case.jurisdiction %}
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          {{ case.jurisdiction }}
+        </div>
+        {% endif %}
+        {% if case.lead_investigator %}
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <i data-lucide="user-check" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          {{ case.lead_investigator.full_name or case.lead_investigator.username }}
+        </div>
+        {% endif %}
+        {% if case.incident_date %}
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          Incident: {{ case.incident_date.strftime('%d %b %Y') }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Footer Stats -->
+      <div class="flex items-center justify-between pt-3 border-t border-cyber-border">
+        <div class="flex items-center gap-3 text-xs font-mono">
+          <span class="flex items-center gap-1.5 text-slate-500">
+            <i data-lucide="database" class="w-3.5 h-3.5"></i>
+            {{ case.evidence_count }} items
+          </span>
+          {% if case.open_evidence_count > 0 %}
+          <span class="flex items-center gap-1.5 text-amber-400">
+            <i data-lucide="unlock" class="w-3 h-3"></i>
+            {{ case.open_evidence_count }} active
+          </span>
+          {% endif %}
+        </div>
+        <span class="text-[10px] text-slate-600 font-mono">
+          {{ case.updated_at.strftime('%d %b %Y') }}
+        </span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="flex flex-col items-center justify-center py-20 text-center">
+    <div class="w-16 h-16 rounded-2xl bg-slate-800 border border-cyber-border flex items-center justify-center mb-4">
+      <i data-lucide="folder-open" class="w-8 h-8 text-slate-600"></i>
+    </div>
+    <h3 class="text-lg font-semibold text-slate-400 mb-2">No Cases Found</h3>
+    <p class="text-sm text-slate-600 mb-6 max-w-sm">
+      {% if search or filter_status or filter_priority %}
+        No cases match your current filters. Try clearing the search.
+      {% else %}
+        No investigative cases have been created yet. Begin by creating a new case.
+      {% endif %}
+    </p>
+    {% if dems_user.has_permission('create_case') %}
+    <button onclick="document.getElementById('newCaseModal').classList.remove('hidden')"
+      class="flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm font-semibold transition-all">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      Create First Case
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── NEW CASE MODAL ──────────────────────────────────────────────────────── -->
+<div id="newCaseModal" class="{% if not show_new_modal %}hidden{% endif %} fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+  <div class="bg-cyber-card border border-cyber-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-cyber-border">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center">
+          <i data-lucide="folder-plus" class="w-4 h-4 text-sky-400"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-white">Create New Case</h2>
+          <p class="text-[10px] text-slate-500 font-mono">Auto-generated case number on submit</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('newCaseModal').classList.add('hidden')"
+        class="text-slate-500 hover:text-slate-300 transition-colors p-1">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" action="{{ url_for('dems.case_new') }}" class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Case Title *</label>
+        <input type="text" name="title" required placeholder="Operation Alpha / Fraud Investigation 2026…"
+          class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500/60 transition-colors font-mono" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Status</label>
+          <select name="status" class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-sky-500/60 font-mono">
+            {% for s in CaseStatus %}
+            <option value="{{ s.value }}" {% if s.value == 'Open' %}selected{% endif %}>{{ s.value }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Priority</label>
+          <select name="priority" class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-sky-500/60 font-mono">
+            {% for p in CasePriority %}
+            <option value="{{ p.value }}" {% if p.value == 'Medium' %}selected{% endif %}>{{ p.value }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Jurisdiction</label>
+          <input type="text" name="jurisdiction" placeholder="e.g. Mumbai, Maharashtra"
+            class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500/60 transition-colors font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Incident Date</label>
+          <input type="date" name="incident_date"
+            class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-sky-500/60 transition-colors font-mono" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Classification</label>
+        <select name="classification" class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-sky-500/60 font-mono">
+          <option value="RESTRICTED">RESTRICTED</option>
+          <option value="CONFIDENTIAL">CONFIDENTIAL</option>
+          <option value="SECRET">SECRET</option>
+          <option value="UNCLASSIFIED">UNCLASSIFIED</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Description / Brief</label>
+        <textarea name="description" rows="3" placeholder="Brief description of the case, allegations, or incident background…"
+          class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500/60 transition-colors font-mono resize-none"></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end gap-3 pt-2 border-t border-cyber-border">
+        <button type="button" onclick="document.getElementById('newCaseModal').classList.add('hidden')"
+          class="px-4 py-2 bg-cyber-surface border border-cyber-border text-slate-400 hover:text-slate-300 rounded-lg text-sm transition-colors font-mono">
+          Cancel
+        </button>
+        <button type="submit"
+          class="flex items-center gap-2 px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-sky-900/30">
+          <i data-lucide="folder-plus" class="w-4 h-4"></i>
+          Create Case
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  lucide.createIcons();
+  // Close modal on backdrop click
+  document.getElementById('newCaseModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+  });
+</script>
+{% endblock %}

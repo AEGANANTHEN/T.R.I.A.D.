@@ -1,0 +1,2900 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Evidence Vault Locker — DEMS Digital Evidence Management
+{% endblock %}
+
+{% block page_title %}
+Digital Evidence Management System (DEMS) / Cryptographic Vault Locker
+{% endblock %}
+
+{% block content %}
+
+<!-- ================================================================
+     VAULT ROOT
+     ================================================================ -->
+
+<div
+  class="space-y-6"
+  id="dems-vault-root"
+>
+
+  <!-- ================================================================
+       HEADER
+       ================================================================ -->
+
+  <div
+    class="flex flex-wrap
+           items-center justify-between
+           gap-4"
+  >
+
+    <div
+      class="flex items-center gap-4"
+    >
+
+      <div
+        class="w-12 h-12
+               bg-emerald-500/10
+               border border-emerald-500/30
+               rounded-xl
+               flex items-center
+               justify-center
+               flex-shrink-0"
+      >
+
+        <i
+          data-lucide="shield-check"
+          class="w-6 h-6 text-emerald-400"
+        ></i>
+
+      </div>
+
+
+      <div>
+
+        <div
+          class="flex items-center
+                 gap-2.5"
+        >
+
+          <h1
+            class="text-xl font-bold
+                   text-white tracking-tight"
+          >
+            Cryptographic Evidence Vault Locker
+          </h1>
+
+
+          <span
+            class="px-2 py-0.5
+                   rounded text-[11px]
+                   font-mono font-bold
+                   bg-emerald-500/20
+                   text-emerald-300
+                   border border-emerald-500/40
+                   flex items-center gap-1.5"
+          >
+
+            <span
+              class="w-1.5 h-1.5
+                     rounded-full
+                     bg-emerald-400
+                     animate-pulse"
+            ></span>
+
+            AES-256-GCM SEALED
+
+          </span>
+
+        </div>
+
+
+        <p
+          class="text-xs
+                 text-slate-400
+                 mt-0.5"
+        >
+
+          ISO/IEC 27037 &amp; NIST SP 800-86
+          • SHA-256 / MD5 / SHA-512
+          • Zero-Disk Decryption
+
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- HEADER BUTTONS -->
+
+    <div
+      class="flex items-center
+             gap-2.5 flex-wrap"
+    >
+
+      {% if current_user
+            and current_user.has_permission('upload_evidence') %}
+
+      <button
+        type="button"
+        onclick="openIntakeModal()"
+        class="btn btn-emerald btn-sm shadow-md shadow-emerald-600/30"
+      >
+
+        <i
+          data-lucide="upload-cloud"
+          class="w-4 h-4"
+        ></i>
+
+        <span>
+          Intake New Evidence
+        </span>
+
+      </button>
+
+      {% endif %}
+
+
+      <a
+        href="{{ url_for('dems.cases_list') }}"
+        class="btn btn-secondary btn-sm"
+      >
+
+        <i
+          data-lucide="folder-kanban"
+          class="w-4 h-4 text-cyan-400"
+        ></i>
+
+        <span>
+          Case Registry
+        </span>
+
+      </a>
+
+
+      <a
+        href="{{ url_for('route_dashboard') }}"
+        class="px-3 py-2
+               bg-card
+               border border-border
+               rounded-lg
+               text-xs
+               text-slate-300
+               hover:text-white
+               hover:border-border-hi
+               transition-colors
+               flex items-center gap-1.5"
+      >
+
+        <i
+          data-lucide="layout-dashboard"
+          class="w-4 h-4 text-sky-400"
+        ></i>
+
+        <span>
+          Forensic Dashboard
+        </span>
+
+      </a>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================================
+       KPI CARDS
+       ================================================================ -->
+
+  <div
+    class="grid grid-cols-2
+           sm:grid-cols-4
+           gap-4"
+  >
+
+    <!-- ============================================================
+         TOTAL
+         ============================================================ -->
+
+    <div
+      class="p-4
+             bg-surface
+             border border-border
+             rounded-xl
+             flex flex-col
+             justify-between"
+    >
+
+      <div
+        class="flex items-center
+               justify-between
+               text-xs text-slate-400"
+      >
+
+        <span>
+          Total Vault Artifacts
+        </span>
+
+        <i
+          data-lucide="database"
+          class="w-4 h-4 text-sky-400"
+        ></i>
+
+      </div>
+
+
+      <div
+        class="mt-2
+               text-2xl
+               font-bold
+               font-mono
+               text-white"
+        id="stat-total-count"
+      >
+
+        {{ evidence_items|length }}
+
+      </div>
+
+
+      <div
+        class="text-[10px]
+               text-slate-500
+               mt-1"
+      >
+
+        Encrypted at rest in /vault
+
+      </div>
+
+    </div>
+
+
+    <!-- ============================================================
+         VERIFIED
+         
+         IMPORTANT:
+         We use a namespace loop instead of selectattr().
+         This correctly handles SQLAlchemy enum values.
+         ============================================================ -->
+
+    {% set verified_counter = namespace(value=0) %}
+
+    {% for item in evidence_items %}
+
+      {% if item.last_verified_status
+            and item.last_verified_status.value == 'Verified' %}
+
+        {% set verified_counter.value =
+              verified_counter.value + 1 %}
+
+      {% endif %}
+
+    {% endfor %}
+
+
+    <div
+      class="p-4
+             bg-surface
+             border border-border
+             rounded-xl
+             flex flex-col
+             justify-between"
+    >
+
+      <div
+        class="flex items-center
+               justify-between
+               text-xs text-slate-400"
+      >
+
+        <span>
+          Integrity Verified
+        </span>
+
+        <i
+          data-lucide="check-circle-2"
+          class="w-4 h-4
+                 text-emerald-400"
+        ></i>
+
+      </div>
+
+
+      <div
+        class="mt-2
+               text-2xl
+               font-bold
+               font-mono
+               text-emerald-400"
+        id="stat-verified-count"
+        data-count="{{ verified_counter.value }}"
+      >
+
+        {{ verified_counter.value }}
+        /
+        {{ evidence_items|length }}
+
+      </div>
+
+
+      <div
+        class="text-[10px]
+               text-slate-500
+               mt-1"
+      >
+
+        Cryptographic baseline matches
+
+      </div>
+
+    </div>
+
+
+    <!-- ============================================================
+         TAMPER COUNT
+         ============================================================ -->
+
+    {% set tamper_counter = namespace(value=0) %}
+
+    {% for item in evidence_items %}
+
+      {% if item.last_verified_status
+            and item.last_verified_status.value
+            == 'Tamper Detected' %}
+
+        {% set tamper_counter.value =
+              tamper_counter.value + 1 %}
+
+      {% endif %}
+
+    {% endfor %}
+
+
+    <div
+      class="p-4
+             bg-surface
+             border border-border
+             rounded-xl
+             flex flex-col
+             justify-between"
+    >
+
+      <div
+        class="flex items-center
+               justify-between
+               text-xs text-slate-400"
+      >
+
+        <span>
+          Tamper Alerts
+        </span>
+
+        <i
+          data-lucide="alert-triangle"
+          class="w-4 h-4 text-rose-400"
+        ></i>
+
+      </div>
+
+
+      <div
+        class="mt-2
+               text-2xl
+               font-bold
+               font-mono
+               text-rose-400"
+        id="stat-tamper-count"
+        data-count="{{ tamper_counter.value }}"
+      >
+
+        {{ tamper_counter.value }}
+
+      </div>
+
+
+      <div
+        class="text-[10px]
+               text-slate-500
+               mt-1"
+      >
+
+        Bit-level mismatch sentinel
+
+      </div>
+
+    </div>
+
+
+    <!-- ============================================================
+         COC
+         ============================================================ -->
+
+    <div
+      class="p-4
+             bg-surface
+             border border-border
+             rounded-xl
+             flex flex-col
+             justify-between"
+    >
+
+      <div
+        class="flex items-center
+               justify-between
+               text-xs text-slate-400"
+      >
+
+        <span>
+          Active CoC Entries
+        </span>
+
+        <i
+          data-lucide="history"
+          class="w-4 h-4 text-amber-400"
+        ></i>
+
+      </div>
+
+
+      <div
+        class="mt-2
+               text-2xl
+               font-bold
+               font-mono
+               text-amber-300"
+        id="stat-coc-count"
+      >
+
+        {{ coc_logs|length }}
+
+      </div>
+
+
+      <div
+        class="text-[10px]
+               text-slate-500
+               mt-1"
+      >
+
+        Immutable audit ledger events
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================================
+       EVIDENCE TABLE
+       ================================================================ -->
+
+  <div
+    class="bg-surface
+           border border-border
+           rounded-xl
+           p-5
+           shadow-2xl
+           space-y-4"
+  >
+
+    <div
+      class="flex flex-wrap
+             items-center
+             justify-between
+             gap-3"
+    >
+
+      <div>
+
+        <h2
+          class="text-sm
+                 font-semibold
+                 text-white
+                 flex items-center gap-2"
+        >
+
+          <i
+            data-lucide="layers"
+            class="w-4 h-4
+                   text-emerald-400"
+          ></i>
+
+          Seized Digital Artifacts &
+          Cryptographic Baselines
+
+        </h2>
+
+
+        <p
+          class="text-xs
+                 text-slate-500
+                 mt-0.5"
+        >
+
+          Verify cryptographic integrity
+          without modifying the original evidence.
+
+        </p>
+
+      </div>
+
+
+      <input
+        type="text"
+        id="vault-search-input"
+        onkeyup="filterVaultTable()"
+        placeholder="Search tag, filename, hash..."
+        class="px-3 py-1.5
+               bg-card
+               border border-border
+               rounded-lg
+               text-xs text-white
+               placeholder-slate-500
+               focus:outline-none
+               focus:border-emerald-500
+               w-64"
+      />
+
+    </div>
+
+
+    <!-- ============================================================
+         TABLE
+         ============================================================ -->
+
+    <div
+      class="overflow-x-auto"
+    >
+
+      <table
+        class="w-full
+               text-xs
+               text-left"
+        id="vault-evidence-table"
+      >
+
+        <thead
+          class="bg-card/70
+                 border-b border-border
+                 text-slate-400
+                 font-mono
+                 uppercase
+                 text-[10px]"
+        >
+
+          <tr>
+
+            <th class="py-3 px-3">
+              Evidence Tag
+            </th>
+
+            <th class="py-3 px-3">
+              Title &amp; File
+            </th>
+
+            <th class="py-3 px-3">
+              Type
+            </th>
+
+            <th class="py-3 px-3">
+              Case #
+            </th>
+
+            <th class="py-3 px-3">
+              Cryptographic Hashes
+            </th>
+
+            <th class="py-3 px-3">
+              Custodian
+            </th>
+
+            <th class="py-3 px-3">
+              Integrity Status
+            </th>
+
+            <th class="py-3 px-3 text-right">
+              Actions
+            </th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody
+          class="divide-y
+                 divide-border/60
+                 font-mono"
+        >
+
+          {% for ev in evidence_items %}
+
+          <tr
+            class="hover:bg-card/40
+                   transition-colors"
+            id="row-ev-{{ ev.id }}"
+          >
+
+            <!-- ======================================================
+                 EVIDENCE TAG
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3
+                     whitespace-nowrap"
+            >
+
+              <a
+                href="{{ url_for(
+                  'dems.evidence_detail',
+                  evidence_id=ev.id
+                ) }}"
+                class="text-sky-400
+                       font-bold
+                       hover:underline
+                       flex items-center gap-1.5"
+              >
+
+                <i
+                  data-lucide="file-text"
+                  class="w-3.5 h-3.5
+                         text-slate-500"
+                ></i>
+
+                {{ ev.evidence_tag }}
+
+              </a>
+
+
+              <span
+                class="text-[10px]
+                       text-slate-500
+                       block"
+              >
+
+                {{ ev.uploaded_at.strftime(
+                  '%Y-%m-%d %H:%M'
+                ) if ev.uploaded_at else '' }}
+
+              </span>
+
+            </td>
+
+
+            <!-- ======================================================
+                 TITLE
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3"
+            >
+
+              <div
+                class="font-sans
+                       font-medium
+                       text-white
+                       max-w-xs
+                       truncate"
+                title="{{ ev.title }}"
+              >
+
+                {{ ev.title }}
+
+              </div>
+
+
+              <div
+                class="text-slate-400
+                       text-[11px]
+                       truncate
+                       flex items-center
+                       gap-1 mt-0.5"
+                title="{{ ev.original_filename }}"
+              >
+
+                {{ ev.original_filename }}
+
+                <span
+                  class="text-slate-600
+                         font-mono"
+                >
+
+                  ({{ ev.file_size_human }})
+
+                </span>
+
+              </div>
+
+            </td>
+
+
+            <!-- ======================================================
+                 TYPE
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3
+                     whitespace-nowrap"
+            >
+
+              {% if ev.evidence_type.value
+                    == 'Telecom Data' %}
+
+              <span
+                class="px-2 py-0.5
+                       bg-sky-500/10
+                       text-sky-400
+                       border
+                       border-sky-500/30
+                       rounded
+                       text-[10px]"
+              >
+
+                CDR / Telecom
+
+              </span>
+
+
+              {% elif ev.evidence_type.value
+                    == 'Multimedia' %}
+
+                {% set media_ext =
+                  ev.original_filename.rsplit(
+                    '.', 1
+                  )[-1].lower()
+                  if '.' in ev.original_filename
+                  else ''
+                %}
+
+
+                {% if media_ext
+                      in ['mp3', 'wav'] %}
+
+                <span
+                  class="px-2 py-0.5
+                         bg-pink-500/10
+                         text-pink-400
+                         border
+                         border-pink-500/30
+                         rounded
+                         text-[10px]"
+                >
+
+                  🎧 Audio Evidence
+                  (.{{ media_ext }})
+
+                </span>
+
+
+                {% elif media_ext
+                      in ['mp4', 'avi'] %}
+
+                <span
+                  class="px-2 py-0.5
+                         bg-purple-500/10
+                         text-purple-400
+                         border
+                         border-purple-500/30
+                         rounded
+                         text-[10px]"
+                >
+
+                  🎥 Video Evidence
+                  (.{{ media_ext }})
+
+                </span>
+
+
+                {% else %}
+
+                <span
+                  class="px-2 py-0.5
+                         bg-purple-500/10
+                         text-purple-400
+                         border
+                         border-purple-500/30
+                         rounded
+                         text-[10px]"
+                >
+
+                  Multimedia
+
+                </span>
+
+                {% endif %}
+
+
+              {% elif ev.evidence_type.value
+                    == 'Mobile Extraction' %}
+
+              <span
+                class="px-2 py-0.5
+                       bg-amber-500/10
+                       text-amber-400
+                       border
+                       border-amber-500/30
+                       rounded
+                       text-[10px]"
+              >
+
+                Mobile Dump
+
+              </span>
+
+
+              {% else %}
+
+              <span
+                class="px-2 py-0.5
+                       bg-slate-500/10
+                       text-slate-400
+                       border
+                       border-slate-500/30
+                       rounded
+                       text-[10px]"
+              >
+
+                {{ ev.evidence_type.value }}
+
+              </span>
+
+              {% endif %}
+
+            </td>
+
+
+            <!-- ======================================================
+                 CASE
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3
+                     whitespace-nowrap"
+            >
+
+              <span
+                class="text-slate-300
+                       font-bold"
+              >
+
+                {{ ev.case.case_number
+                   if ev.case
+                   else '—' }}
+
+              </span>
+
+            </td>
+
+
+            <!-- ======================================================
+                 HASHES
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3"
+            >
+
+              <div
+                class="space-y-1
+                       max-w-xs"
+              >
+
+                {% if ev.sha256_intake %}
+
+                <div
+                  class="flex items-center
+                         gap-1.5
+                         bg-bg/80
+                         px-2 py-1
+                         rounded
+                         border
+                         border-border/80"
+                >
+
+                  <span
+                    class="text-[9px]
+                           text-slate-500
+                           uppercase
+                           font-bold"
+                  >
+
+                    SHA256:
+
+                  </span>
+
+
+                  <span
+                    class="text-[10px]
+                           text-emerald-400
+                           truncate
+                           flex-1"
+                    title="{{ ev.sha256_intake }}"
+                  >
+
+                    {{ ev.sha256_intake[:16] }}…
+
+                  </span>
+
+
+                  <button
+                    type="button"
+                    onclick="copyHash(
+                      '{{ ev.sha256_intake }}',
+                      this
+                    )"
+                    class="text-slate-500
+                           hover:text-white
+                           p-0.5"
+                    title="Copy SHA-256"
+                  >
+
+                    <i
+                      data-lucide="copy"
+                      class="w-3 h-3"
+                    ></i>
+
+                  </button>
+
+                </div>
+
+                {% endif %}
+
+
+                {% if ev.md5_intake %}
+
+                <div
+                  class="flex items-center
+                         gap-1.5
+                         bg-bg/80
+                         px-2 py-0.5
+                         rounded
+                         border
+                         border-border/60"
+                >
+
+                  <span
+                    class="text-[9px]
+                           text-slate-500
+                           uppercase
+                           font-bold"
+                  >
+
+                    MD5:
+
+                  </span>
+
+
+                  <span
+                    class="text-[10px]
+                           text-slate-300
+                           truncate
+                           flex-1"
+                    title="{{ ev.md5_intake }}"
+                  >
+
+                    {{ ev.md5_intake[:16] }}…
+
+                  </span>
+
+
+                  <button
+                    type="button"
+                    onclick="copyHash(
+                      '{{ ev.md5_intake }}',
+                      this
+                    )"
+                    class="text-slate-500
+                           hover:text-white
+                           p-0.5"
+                    title="Copy MD5"
+                  >
+
+                    <i
+                      data-lucide="copy"
+                      class="w-3 h-3"
+                    ></i>
+
+                  </button>
+
+                </div>
+
+                {% endif %}
+
+
+                {% if ev.sha512_intake %}
+
+                <div
+                  class="flex items-center
+                         gap-1.5
+                         bg-bg/80
+                         px-2 py-0.5
+                         rounded
+                         border
+                         border-border/60"
+                >
+
+                  <span
+                    class="text-[9px]
+                           text-slate-500
+                           uppercase
+                           font-bold"
+                  >
+
+                    SHA512:
+
+                  </span>
+
+
+                  <span
+                    class="text-[10px]
+                           text-slate-300
+                           truncate
+                           flex-1"
+                    title="{{ ev.sha512_intake }}"
+                  >
+
+                    {{ ev.sha512_intake[:16] }}…
+
+                  </span>
+
+
+                  <button
+                    type="button"
+                    onclick="copyHash(
+                      '{{ ev.sha512_intake }}',
+                      this
+                    )"
+                    class="text-slate-500
+                           hover:text-white
+                           p-0.5"
+                    title="Copy SHA-512"
+                  >
+
+                    <i
+                      data-lucide="copy"
+                      class="w-3 h-3"
+                    ></i>
+
+                  </button>
+
+                </div>
+
+                {% endif %}
+
+              </div>
+
+            </td>
+
+
+            <!-- ======================================================
+                 CUSTODIAN
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3
+                     whitespace-nowrap"
+            >
+
+              <div
+                class="text-slate-300"
+              >
+
+                {{ ev.custodian.full_name
+                   if ev.custodian
+                   else 'Unassigned' }}
+
+              </div>
+
+
+              {% if ev.custodian %}
+
+              <div
+                class="text-[10px]
+                       text-slate-500"
+              >
+
+                {{ ev.custodian.role.value }}
+
+              </div>
+
+              {% endif %}
+
+            </td>
+
+
+            <!-- ======================================================
+                 INTEGRITY STATUS
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3
+                     whitespace-nowrap"
+              id="status-cell-{{ ev.id }}"
+            >
+
+              {% if ev.last_verified_status
+                    and ev.last_verified_status.value
+                    == 'Verified' %}
+
+              <span
+                class="inline-flex
+                       items-center
+                       gap-1
+                       px-2.5 py-1
+                       bg-emerald-500/20
+                       border
+                       border-emerald-500/50
+                       text-emerald-400
+                       rounded
+                       text-[10px]
+                       font-bold"
+              >
+
+                <i
+                  data-lucide="check-check"
+                  class="w-3 h-3"
+                ></i>
+
+                PASS: VERIFIED INTACT
+
+              </span>
+
+
+              {% elif ev.last_verified_status
+                    and ev.last_verified_status.value
+                    == 'Tamper Detected' %}
+
+              <span
+                class="inline-flex
+                       items-center
+                       gap-1
+                       px-2.5 py-1
+                       bg-rose-500/25
+                       border
+                       border-rose-500/60
+                       text-rose-300
+                       rounded
+                       text-[10px]
+                       font-bold"
+              >
+
+                <i
+                  data-lucide="alert-octagon"
+                  class="w-3 h-3"
+                ></i>
+
+                FAIL: TAMPER DETECTED
+
+              </span>
+
+
+              {% else %}
+
+              <span
+                class="inline-flex
+                       items-center
+                       gap-1
+                       px-2.5 py-1
+                       bg-slate-500/10
+                       border
+                       border-border
+                       text-slate-400
+                       rounded
+                       text-[10px]
+                       font-bold"
+              >
+
+                <i
+                  data-lucide="help-circle"
+                  class="w-3 h-3"
+                ></i>
+
+                NOT VERIFIED
+
+              </span>
+
+              {% endif %}
+
+            </td>
+
+
+            <!-- ======================================================
+                 ACTIONS
+                 ====================================================== -->
+
+            <td
+              class="py-3 px-3"
+            >
+
+              <div
+                class="flex items-center
+                       justify-end
+                       gap-1.5"
+              >
+
+                <button
+                  type="button"
+                  onclick="triggerVerification(
+                    {{ ev.id }},
+                    this
+                  )"
+                  class="px-2 py-1
+                         text-[10px]
+                         bg-sky-500/10
+                         text-sky-400
+                         border
+                         border-sky-500/30
+                         rounded
+                         hover:bg-sky-500/20
+                         flex items-center
+                         gap-1"
+                >
+
+                  <i
+                    data-lucide="shield-check"
+                    class="w-3 h-3"
+                  ></i>
+
+                  Verify
+
+                </button>
+
+
+                {% if current_user
+                      and current_user.has_permission(
+                        'transfer_custody'
+                      ) %}
+
+                <button
+                  type="button"
+                  onclick="openTransferModal(
+                    {{ ev.id }},
+                    '{{ ev.evidence_tag }}',
+                    {{ ev.current_custodian_id or 0 }}
+                  )"
+                  class="px-2 py-1
+                         text-[10px]
+                         bg-amber-500/10
+                         text-amber-400
+                         border
+                         border-amber-500/30
+                         rounded
+                         hover:bg-amber-500/20
+                         flex items-center
+                         gap-1"
+                >
+
+                  <i
+                    data-lucide="arrow-right-left"
+                    class="w-3 h-3"
+                  ></i>
+
+                  CoC
+
+                </button>
+
+                {% endif %}
+
+
+                <a
+                  href="{{ url_for(
+                    'dems.evidence_detail',
+                    evidence_id=ev.id
+                  ) }}"
+                  class="px-2 py-1
+                         text-[10px]
+                         bg-card
+                         text-slate-300
+                         border
+                         border-border
+                         rounded
+                         hover:text-white
+                         flex items-center
+                         gap-1"
+                >
+
+                  <i
+                    data-lucide="eye"
+                    class="w-3 h-3"
+                  ></i>
+
+                  View
+
+                </a>
+
+
+                {% if current_user
+                      and current_user.has_permission(
+                        'download_evidence'
+                      ) %}
+
+                <a
+                  href="{{ url_for(
+                    'dems.evidence_download',
+                    evidence_id=ev.id
+                  ) }}"
+                  class="px-2 py-1
+                         text-[10px]
+                         bg-card
+                         text-slate-400
+                         border
+                         border-border
+                         rounded
+                         hover:text-white
+                         flex items-center
+                         gap-1"
+                >
+
+                  <i
+                    data-lucide="download"
+                    class="w-3 h-3"
+                  ></i>
+
+                  Download
+
+                </a>
+
+                {% endif %}
+
+              </div>
+
+            </td>
+
+          </tr>
+
+
+          {% else %}
+
+          <tr>
+
+            <td
+              colspan="8"
+              class="py-16
+                     text-center
+                     text-slate-500"
+            >
+
+              <div
+                class="flex
+                       flex-col
+                       items-center
+                       gap-3"
+              >
+
+                <i
+                  data-lucide="shield-off"
+                  class="w-10 h-10
+                         text-slate-700"
+                ></i>
+
+
+                <div>
+
+                  <div
+                    class="text-sm
+                           text-slate-400
+                           font-semibold"
+                  >
+
+                    No Evidence in Vault
+
+                  </div>
+
+
+                  <div
+                    class="text-xs
+                           text-slate-600
+                           mt-1"
+                  >
+
+                    Use "Intake New Evidence"
+                    to securely acquire
+                    your first artifact.
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </td>
+
+          </tr>
+
+          {% endfor %}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================================
+     INTAKE MODAL
+     ================================================================ -->
+
+<div
+  id="intake-modal"
+  class="hidden
+         fixed inset-0
+         z-50
+         flex items-center
+         justify-center
+         bg-black/80
+         backdrop-blur-sm
+         p-4"
+>
+
+  <div
+    class="bg-surface
+           border border-border
+           rounded-2xl
+           max-w-2xl
+           w-full
+           p-6
+           shadow-2xl
+           space-y-5"
+  >
+
+    <div
+      class="flex items-center
+             justify-between
+             border-b border-border
+             pb-3"
+    >
+
+      <div
+        class="flex items-center
+               gap-2"
+      >
+
+        <i
+          data-lucide="shield-plus"
+          class="w-5 h-5
+                 text-emerald-400"
+        ></i>
+
+
+        <div>
+
+          <h3
+            class="text-base
+                   font-bold
+                   text-white"
+          >
+
+            Secure Evidence Intake
+
+          </h3>
+
+
+          <p
+            class="text-[10px]
+                   text-slate-500
+                   mt-0.5"
+          >
+
+            Evidence is hashed and
+            encrypted before storage.
+
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <button
+        type="button"
+        onclick="closeIntakeModal()"
+        class="text-slate-400
+               hover:text-white"
+      >
+
+        <i
+          data-lucide="x"
+          class="w-5 h-5"
+        ></i>
+
+      </button>
+
+    </div>
+
+
+    <form
+      action="{{ url_for(
+        'dems.evidence_intake_direct'
+      ) }}"
+      method="POST"
+      enctype="multipart/form-data"
+      class="space-y-4
+             text-xs"
+    >
+
+      <!-- CASE -->
+
+      <div>
+
+        <label
+          class="block
+                 text-slate-300
+                 font-semibold
+                 mb-1"
+        >
+
+          Target Case Assignment
+
+        </label>
+
+
+        <select
+          name="case_id"
+          class="w-full
+                 bg-card
+                 border border-border
+                 rounded-lg
+                 p-2
+                 text-white
+                 focus:outline-none
+                 focus:border-emerald-500"
+        >
+
+          {% for c in cases %}
+
+          <option value="{{ c.id }}">
+
+            {{ c.case_number }}
+            —
+            {{ c.title }}
+
+          </option>
+
+          {% else %}
+
+          <option value="">
+
+            Default Investigative Case
+
+          </option>
+
+          {% endfor %}
+
+        </select>
+
+      </div>
+
+
+      <!-- TITLE + TYPE -->
+
+      <div
+        class="grid grid-cols-2
+               gap-3"
+      >
+
+        <div>
+
+          <label
+            class="block
+                   text-slate-300
+                   font-semibold
+                   mb-1"
+          >
+
+            Evidence Title
+
+          </label>
+
+
+          <input
+            type="text"
+            name="title"
+            placeholder="e.g. Seized Audio Conversation"
+            class="w-full
+                   bg-card
+                   border border-border
+                   rounded-lg
+                   p-2
+                   text-white
+                   focus:outline-none
+                   focus:border-emerald-500"
+          />
+
+        </div>
+
+
+        <div>
+
+          <label
+            class="block
+                   text-slate-300
+                   font-semibold
+                   mb-1"
+          >
+
+            Evidence Classification
+
+          </label>
+
+
+          <select
+            name="evidence_type"
+            class="w-full
+                   bg-card
+                   border border-border
+                   rounded-lg
+                   p-2
+                   text-white
+                   focus:outline-none
+                   focus:border-emerald-500"
+          >
+
+            <option value="Multimedia">
+
+              Multimedia / Audio / Video
+              (.mp3, .wav, .mp4, .avi)
+
+            </option>
+
+
+            <option value="Telecom Data">
+
+              Telecom CDR / Carrier Log
+
+            </option>
+
+
+            <option value="Mobile Extraction">
+
+              Mobile Extraction /
+              Physical Dump
+
+            </option>
+
+
+            <option value="Disk & Memory Image">
+
+              Disk &amp; Memory Image
+              (.raw/.dd)
+
+            </option>
+
+
+            <option value="Network & System Logs">
+
+              Network Packet Capture
+              (.pcap)
+
+            </option>
+
+
+            <option value="Other">
+
+              Other Digital Exhibit
+
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <!-- FILE -->
+
+      <div>
+
+        <label
+          class="block
+                 text-slate-300
+                 font-semibold
+                 mb-1"
+        >
+
+          Evidence File
+
+        </label>
+
+
+        <input
+          type="file"
+          name="evidence_file"
+          required
+          class="w-full
+                 bg-card
+                 border border-border
+                 rounded-lg
+                 p-2
+                 text-slate-300
+                 file:mr-3
+                 file:px-3
+                 file:py-1.5
+                 file:rounded
+                 file:border-0
+                 file:bg-emerald-600
+                 file:text-white
+                 file:text-xs"
+        />
+
+
+        <p
+          class="text-[10px]
+                 text-slate-500
+                 mt-1"
+        >
+
+          Supported evidence includes CDR,
+          documents, images, audio (.mp3/.wav)
+          and video (.mp4/.avi).
+
+        </p>
+
+      </div>
+
+
+      <!-- NOTES -->
+
+      <div>
+
+        <label
+          class="block
+                 text-slate-300
+                 font-semibold
+                 mb-1"
+        >
+
+          Investigative Intake Notes /
+          Chain of Custody Memo
+
+        </label>
+
+
+        <textarea
+          name="notes"
+          rows="3"
+          placeholder="Describe acquisition location, seizing officer, device status, and other relevant details..."
+          class="w-full
+                 bg-card
+                 border border-border
+                 rounded-lg
+                 p-2
+                 text-white
+                 focus:outline-none
+                 focus:border-emerald-500"
+        ></textarea>
+
+      </div>
+
+
+      <!-- FOOTER -->
+
+      <div
+        class="flex items-center
+               justify-end
+               gap-2
+               pt-2
+               border-t
+               border-border"
+      >
+
+        <button
+          type="button"
+          onclick="closeIntakeModal()"
+          class="px-4 py-2
+                 bg-card
+                 hover:bg-slate-800
+                 text-slate-300
+                 rounded-lg"
+        >
+
+          Cancel
+
+        </button>
+
+
+        <button
+          type="submit"
+          class="px-4 py-2
+                 bg-emerald-600
+                 hover:bg-emerald-500
+                 text-white
+                 font-semibold
+                 rounded-lg
+                 shadow
+                 flex items-center
+                 gap-1.5"
+        >
+
+          <i
+            data-lucide="lock"
+            class="w-4 h-4"
+          ></i>
+
+          Seal &amp; Encrypt to Vault
+
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================================
+     CHAIN OF CUSTODY MODAL
+     ================================================================ -->
+
+<div
+  id="transfer-modal"
+  class="hidden
+         fixed inset-0
+         z-50
+         flex items-center
+         justify-center
+         bg-black/80
+         backdrop-blur-sm
+         p-4"
+>
+
+  <div
+    class="bg-surface
+           border border-border
+           rounded-2xl
+           max-w-md
+           w-full
+           p-6
+           shadow-2xl
+           space-y-4"
+  >
+
+    <div
+      class="flex items-center
+             justify-between
+             border-b border-border
+             pb-3"
+    >
+
+      <div
+        class="flex items-center
+               gap-2"
+      >
+
+        <i
+          data-lucide="arrow-right-left"
+          class="w-5 h-5
+                 text-amber-400"
+        ></i>
+
+
+        <h3
+          class="text-base
+                 font-bold
+                 text-white"
+        >
+
+          Custodial Transfer Entry
+
+        </h3>
+
+      </div>
+
+
+      <button
+        type="button"
+        onclick="closeTransferModal()"
+        class="text-slate-400
+               hover:text-white"
+      >
+
+        <i
+          data-lucide="x"
+          class="w-5 h-5"
+        ></i>
+
+      </button>
+
+    </div>
+
+
+    <form
+      id="transfer-form"
+      action=""
+      method="POST"
+      class="space-y-4
+             text-xs"
+    >
+
+      <input
+        type="hidden"
+        name="redirect_to"
+        value="vault"
+      />
+
+
+      <div>
+
+        <label
+          class="block
+                 text-slate-400
+                 text-[11px]
+                 uppercase
+                 mb-1"
+        >
+
+          Target Evidence Tag
+
+        </label>
+
+
+        <div
+          id="transfer-target-tag"
+          class="font-mono
+                 text-sm
+                 font-bold
+                 text-sky-400
+                 bg-card
+                 p-2
+                 rounded
+                 border border-border"
+        >
+
+          EVD-0000-0000
+
+        </div>
+
+      </div>
+
+
+      <div>
+
+        <label
+          class="block
+                 text-slate-300
+                 font-semibold
+                 mb-1"
+        >
+
+          Lifecycle Action
+
+        </label>
+
+
+        <select
+          name="action"
+          class="w-full
+                 bg-card
+                 border border-border
+                 rounded-lg
+                 p-2
+                 text-white
+                 focus:outline-none
+                 focus:border-amber-500"
+        >
+
+          <option value="TRANSFER_CUSTODY">
+
+            TRANSFER_CUSTODY —
+            Handover to New Custodian
+
+          </option>
+
+
+          <option value="CHECK_OUT">
+
+            CHECK_OUT —
+            Release for Analysis /
+            Court Exhibit
+
+          </option>
+
+
+          <option value="CHECK_IN">
+
+            CHECK_IN —
+            Return to Vault Storage
+
+          </option>
+
+
+          <option value="ANALYSIS_RUN">
+
+            ANALYSIS_RUN —
+            Analytical Pipeline Execution
+
+          </option>
+
+
+          <option value="COURT_EXHIBIT_EXPORT">
+
+            COURT_EXHIBIT_EXPORT —
+            Export for Judicial Presentation
+
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div>
+
+        <label
+          class="block
+                 text-slate-300
+                 font-semibold
+                 mb-1"
+        >
+
+          Recipient / New Custodian
+
+        </label>
+
+
+        <select
+          name="new_custodian_id"
+          class="w-full
+                 bg-card
+                 border border-border
+                 rounded-lg
+                 p-2
+                 text-white
+                 focus:outline-none
+                 focus:border-amber-500"
+        >
+
+          {% for u in users %}
+
+          <option value="{{ u.id }}">
+
+            {{ u.full_name or u.username }}
+            ({{ u.role.value }})
+
+          </option>
+
+          {% endfor %}
+
+        </select>
+
+      </div>
+
+
+      <div>
+
+        <label
+          class="block
+                 text-slate-300
+                 font-semibold
+                 mb-1"
+        >
+
+          Authorized Purpose &amp;
+          Judicial Notes
+
+        </label>
+
+
+        <textarea
+          name="purpose"
+          rows="3"
+          required
+          placeholder="Mandatory statement of purpose for this chain-of-custody transfer..."
+          class="w-full
+                 bg-card
+                 border border-border
+                 rounded-lg
+                 p-2
+                 text-white
+                 focus:outline-none
+                 focus:border-amber-500"
+        ></textarea>
+
+      </div>
+
+
+      <div
+        class="flex items-center
+               justify-end
+               gap-2
+               pt-2
+               border-t
+               border-border"
+      >
+
+        <button
+          type="button"
+          onclick="closeTransferModal()"
+          class="px-4 py-2
+                 bg-card
+                 hover:bg-slate-800
+                 text-slate-300
+                 rounded-lg"
+        >
+
+          Cancel
+
+        </button>
+
+
+        <button
+          type="submit"
+          class="px-4 py-2
+                 bg-amber-600
+                 hover:bg-amber-500
+                 text-white
+                 font-semibold
+                 rounded-lg
+                 shadow
+                 flex items-center
+                 gap-1.5"
+        >
+
+          <i
+            data-lucide="check"
+            class="w-4 h-4"
+          ></i>
+
+          Sign &amp; Append to CoC
+
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================================
+     JAVASCRIPT
+     ================================================================ -->
+
+<script>
+
+/* ================================================================
+   VERIFY EVIDENCE
+   ================================================================ */
+
+async function triggerVerification(
+  evidenceId,
+  btnElem
+) {
+
+  const originalContent =
+    btnElem.innerHTML;
+
+
+  /*
+   * Determine whether this row was already
+   * verified BEFORE this verification request.
+   *
+   * This prevents:
+   *
+   * Verify → count +1
+   * Verify again → count +1 AGAIN
+   *
+   * which would be incorrect.
+   */
+
+  const statusCell =
+    document.getElementById(
+      `status-cell-${evidenceId}`
+    );
+
+
+  const wasAlreadyVerified =
+    statusCell &&
+    statusCell.innerText
+      .toLowerCase()
+      .includes('verified intact');
+
+
+  btnElem.disabled = true;
+
+
+  btnElem.innerHTML = `
+    <span
+      class="inline-block
+             animate-spin
+             mr-1">
+
+      ↻
+
+    </span>
+
+    Re-Hashing...
+  `;
+
+
+  try {
+
+    const response =
+      await fetch(
+        `/dems/verify/${evidenceId}`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Accept':
+              'application/json'
+          }
+        }
+      );
+
+
+    /*
+     * Handle authentication /
+     * server errors cleanly.
+     */
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Verification request failed: HTTP ${response.status}`
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    /*
+     * ============================================================
+     * VERIFIED
+     * ============================================================
+     */
+
+    if (
+      data.is_verified === true ||
+      data.verified === true
+    ) {
+
+
+      /*
+       * Update the evidence row.
+       */
+
+      if (statusCell) {
+
+        statusCell.innerHTML = `
+
+          <span
+            class="inline-flex
+                   items-center
+                   gap-1
+                   px-2.5 py-1
+                   bg-emerald-500/20
+                   border
+                   border-emerald-500/50
+                   text-emerald-400
+                   rounded
+                   text-[10px]
+                   font-bold">
+
+            <i
+              data-lucide="check-check"
+              class="w-3 h-3">
+            </i>
+
+            PASS: VERIFIED INTACT
+
+          </span>
+
+
+          <span
+            class="block
+                   text-[9px]
+                   text-slate-500
+                   mt-0.5">
+
+            Just now
+
+          </span>
+
+        `;
+
+      }
+
+
+      /*
+       * Update Verify button.
+       */
+
+      btnElem.innerHTML = `
+
+        <i
+          data-lucide="check"
+          class="w-3.5 h-3.5
+                 text-emerald-400">
+        </i>
+
+        <span
+          class="text-emerald-400">
+
+          Verified
+
+        </span>
+
+      `;
+
+
+      /*
+       * ==========================================================
+       * UPDATE KPI
+       *
+       * Only increase the count when this evidence was NOT
+       * already verified before the current request.
+       * ==========================================================
+       */
+
+      if (!wasAlreadyVerified) {
+
+        updateVerifiedKPI(1);
+
+      }
+
+
+    }
+
+
+    /*
+     * ============================================================
+     * TAMPERED
+     * ============================================================
+     */
+
+    else {
+
+      if (statusCell) {
+
+        statusCell.innerHTML = `
+
+          <span
+            class="inline-flex
+                   items-center
+                   gap-1
+                   px-2.5 py-1
+                   bg-rose-500/25
+                   border
+                   border-rose-500/60
+                   text-rose-300
+                   rounded
+                   text-[10px]
+                   font-bold
+                   animate-pulse">
+
+            <i
+              data-lucide="alert-octagon"
+              class="w-3 h-3">
+            </i>
+
+            FAIL: TAMPER DETECTED
+
+          </span>
+
+
+          <span
+            class="block
+                   text-[9px]
+                   text-rose-400
+                   mt-0.5">
+
+            Bit mismatch
+
+          </span>
+
+        `;
+
+      }
+
+
+      btnElem.innerHTML = `
+
+        <i
+          data-lucide="alert-triangle"
+          class="w-3.5 h-3.5
+                 text-rose-400">
+        </i>
+
+        <span
+          class="text-rose-400">
+
+          Tampered
+
+        </span>
+
+      `;
+
+
+      /*
+       * If a previously verified evidence item becomes
+       * tampered, decrease the verified count.
+       */
+
+      if (wasAlreadyVerified) {
+
+        updateVerifiedKPI(-1);
+
+      }
+
+
+      updateTamperKPI(1);
+
+    }
+
+
+    if (
+      typeof lucide !== 'undefined'
+    ) {
+
+      lucide.createIcons();
+
+    }
+
+
+  } catch (err) {
+
+    console.error(
+      'Verification error:',
+      err
+    );
+
+
+    btnElem.innerHTML = `
+
+      <span
+        class="text-rose-400">
+
+        Verification Error
+
+      </span>
+
+    `;
+
+
+  } finally {
+
+    setTimeout(() => {
+
+      btnElem.disabled = false;
+
+      btnElem.innerHTML =
+        originalContent;
+
+
+      if (
+        typeof lucide !== 'undefined'
+      ) {
+
+        lucide.createIcons();
+
+      }
+
+    }, 3000);
+
+  }
+
+}
+
+
+/* ================================================================
+   UPDATE VERIFIED KPI
+   ================================================================ */
+
+function updateVerifiedKPI(
+  delta
+) {
+
+  const element =
+    document.getElementById(
+      'stat-verified-count'
+    );
+
+
+  if (!element) {
+
+    return;
+
+  }
+
+
+  /*
+   * Read the current count from
+   * the data attribute.
+   */
+
+  let current =
+    parseInt(
+      element.dataset.count || '0',
+      10
+    );
+
+
+  if (Number.isNaN(current)) {
+
+    current = 0;
+
+  }
+
+
+  const total =
+    {{ evidence_items|length }};
+
+
+  /*
+   * Prevent invalid values.
+   */
+
+  current =
+    Math.max(
+      0,
+      Math.min(
+        total,
+        current + delta
+      )
+    );
+
+
+  element.dataset.count =
+    current;
+
+
+  element.innerHTML =
+    `${current} / ${total}`;
+
+}
+
+
+/* ================================================================
+   UPDATE TAMPER KPI
+   ================================================================ */
+
+function updateTamperKPI(
+  delta
+) {
+
+  const element =
+    document.getElementById(
+      'stat-tamper-count'
+    );
+
+
+  if (!element) {
+
+    return;
+
+  }
+
+
+  let current =
+    parseInt(
+      element.dataset.count || '0',
+      10
+    );
+
+
+  if (Number.isNaN(current)) {
+
+    current = 0;
+
+  }
+
+
+  current =
+    Math.max(
+      0,
+      current + delta
+    );
+
+
+  element.dataset.count =
+    current;
+
+
+  element.innerText =
+    current;
+
+}
+
+
+/* ================================================================
+   COPY HASH
+   ================================================================ */
+
+function copyHash(
+  text,
+  btn
+) {
+
+  if (!text) {
+
+    return;
+
+  }
+
+
+  if (
+    navigator.clipboard &&
+    navigator.clipboard.writeText
+  ) {
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+
+        btn.classList.add(
+          'text-emerald-400'
+        );
+
+
+        setTimeout(() => {
+
+          btn.classList.remove(
+            'text-emerald-400'
+          );
+
+        }, 1500);
+
+      })
+      .catch(err => {
+
+        console.error(
+          'Clipboard error:',
+          err
+        );
+
+      });
+
+  }
+
+}
+
+
+/* ================================================================
+   SEARCH VAULT
+   ================================================================ */
+
+function filterVaultTable() {
+
+  const input =
+    document.getElementById(
+      'vault-search-input'
+    );
+
+
+  if (!input) {
+
+    return;
+
+  }
+
+
+  const filter =
+    input.value.toLowerCase();
+
+
+  const rows =
+    document.querySelectorAll(
+      '#vault-evidence-table tbody tr'
+    );
+
+
+  rows.forEach(
+    row => {
+
+      const text =
+        row.innerText.toLowerCase();
+
+
+      row.style.display =
+        text.includes(filter)
+          ? ''
+          : 'none';
+
+    }
+  );
+
+}
+
+
+/* ================================================================
+   INTAKE MODAL
+   ================================================================ */
+
+function openIntakeModal() {
+
+  const modal =
+    document.getElementById(
+      'intake-modal'
+    );
+
+
+  if (!modal) {
+
+    return;
+
+  }
+
+
+  modal.classList.remove(
+    'hidden'
+  );
+
+
+  if (
+    typeof lucide !== 'undefined'
+  ) {
+
+    lucide.createIcons();
+
+  }
+
+}
+
+
+function closeIntakeModal() {
+
+  const modal =
+    document.getElementById(
+      'intake-modal'
+    );
+
+
+  if (!modal) {
+
+    return;
+
+  }
+
+
+  modal.classList.add(
+    'hidden'
+  );
+
+}
+
+
+/* ================================================================
+   CHAIN OF CUSTODY MODAL
+   ================================================================ */
+
+function openTransferModal(
+  evidenceId,
+  tag,
+  currentCustodianId
+) {
+
+  const form =
+    document.getElementById(
+      'transfer-form'
+    );
+
+
+  const tagElement =
+    document.getElementById(
+      'transfer-target-tag'
+    );
+
+
+  const modal =
+    document.getElementById(
+      'transfer-modal'
+    );
+
+
+  if (
+    !form ||
+    !tagElement ||
+    !modal
+  ) {
+
+    return;
+
+  }
+
+
+  form.action =
+    `/dems/evidence/${evidenceId}/transfer`;
+
+
+  tagElement.innerText =
+    tag ||
+    `EVD-${evidenceId}`;
+
+
+  modal.classList.remove(
+    'hidden'
+  );
+
+
+  if (
+    typeof lucide !== 'undefined'
+  ) {
+
+    lucide.createIcons();
+
+  }
+
+}
+
+
+function closeTransferModal() {
+
+  const modal =
+    document.getElementById(
+      'transfer-modal'
+    );
+
+
+  if (!modal) {
+
+    return;
+
+  }
+
+
+  modal.classList.add(
+    'hidden'
+  );
+
+}
+
+
+/* ================================================================
+   ESCAPE KEY
+   ================================================================ */
+
+document.addEventListener(
+  'keydown',
+  function(event) {
+
+    if (
+      event.key === 'Escape'
+    ) {
+
+      closeIntakeModal();
+      closeTransferModal();
+
+    }
+
+  }
+);
+
+
+/* ================================================================
+   INITIALIZE LUCIDE ICONS
+   ================================================================ */
+
+document.addEventListener(
+  'DOMContentLoaded',
+  function() {
+
+    if (
+      typeof lucide !== 'undefined'
+    ) {
+
+      lucide.createIcons();
+
+    }
+
+  }
+);
+
+</script>
+
+{% endblock %}

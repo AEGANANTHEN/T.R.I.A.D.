@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chain of Custody Dossier — {{ ev.evidence_tag }} | {{ case.case_number }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Print & Screen Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.5;
+      color: #1e293b;
+      background: #f8fafc;
+    }
+    .page {
+      max-width: 780px;
+      margin: 0 auto;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+
+    /* ── Header & Classification Banner ──────────────────────────────── */
+    .classification-banner {
+      background: #1e293b;
+      color: #f1f5f9;
+      text-align: center;
+      padding: 6px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .doc-header {
+      padding: 24px 40px 16px;
+      border-bottom: 3px solid #0ea5e9;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .doc-header-left { flex: 1; }
+    .doc-header-right { text-align: right; flex-shrink: 0; }
+    .badge-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border: 2px solid #0ea5e9;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #f0f9ff;
+    }
+    .doc-title {
+      font-size: 18pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+    .doc-subtitle {
+      font-size: 9pt;
+      color: #64748b;
+      margin-top: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .doc-number {
+      font-size: 9pt;
+      font-family: 'JetBrains Mono', monospace;
+      color: #64748b;
+      line-height: 1.8;
+    }
+    .doc-number strong { color: #0f172a; }
+
+    /* ── Section Headers ─────────────────────────────────────────────── */
+    .section {
+      padding: 20px 40px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .section:last-child { border-bottom: none; }
+    .section-title {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0ea5e9;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #bae6fd;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Info Grid ───────────────────────────────────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 24px;
+    }
+    .info-grid.three-col { grid-template-columns: repeat(3, 1fr); }
+    .info-item { padding: 6px 0; }
+    .info-label {
+      font-size: 7.5pt;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 2px;
+    }
+    .info-value {
+      font-size: 9.5pt;
+      color: #0f172a;
+      font-weight: 500;
+      word-break: break-all;
+    }
+    .info-value.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      color: #0f172a;
+    }
+
+    /* ── Hash Block ──────────────────────────────────────────────────── */
+    .hash-block {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid #10b981;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .hash-block.amber { border-left-color: #f59e0b; }
+    .hash-block.purple { border-left-color: #8b5cf6; }
+    .hash-label {
+      font-size: 7pt;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 3px;
+    }
+    .hash-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      color: #0f172a;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    /* ── CoC Table ───────────────────────────────────────────────────── */
+    .coc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+    }
+    .coc-table thead tr {
+      background: #0f172a;
+      color: #f1f5f9;
+    }
+    .coc-table thead th {
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 7.5pt;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .coc-table tbody tr { border-bottom: 1px solid #e2e8f0; }
+    .coc-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .coc-table tbody tr:hover { background: #f0f9ff; }
+    .coc-table tbody td {
+      padding: 7px 10px;
+      vertical-align: top;
+      color: #1e293b;
+      font-size: 8.5pt;
+    }
+    .coc-table .mono-cell {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+    }
+    .action-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 7pt;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .badge-ingestion    { background: #dcfce7; color: #166534; }
+    .badge-analysis     { background: #dbeafe; color: #1e40af; }
+    .badge-checkout     { background: #fef9c3; color: #854d0e; }
+    .badge-checkin      { background: #cffafe; color: #164e63; }
+    .badge-transfer     { background: #ede9fe; color: #5b21b6; }
+    .badge-integrity    { background: #dcfce7; color: #166534; }
+    .badge-court        { background: #fef9c3; color: #854d0e; }
+    .badge-access       { background: #f1f5f9; color: #475569; }
+    .badge-download     { background: #dbeafe; color: #1e40af; }
+    .badge-disposition  { background: #fee2e2; color: #991b1b; }
+    .status-verified    { color: #16a34a; font-weight: 600; }
+    .status-tampered    { color: #dc2626; font-weight: 600; }
+    .status-unverified  { color: #94a3b8; }
+
+    /* ── Signature Block ─────────────────────────────────────────────── */
+    .sig-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 8px;
+    }
+    .sig-block { }
+    .sig-label {
+      font-size: 8pt;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 20px;
+    }
+    .sig-line {
+      border-top: 1px solid #1e293b;
+      margin-bottom: 4px;
+    }
+    .sig-sublabel {
+      font-size: 7.5pt;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .sig-field {
+      margin-bottom: 14px;
+    }
+    .sig-field p { font-size: 8pt; color: #64748b; margin-bottom: 2px; }
+    .sig-field .line {
+      border-bottom: 1px solid #cbd5e1;
+      height: 18px;
+    }
+
+    /* ── Alert Box ───────────────────────────────────────────────────── */
+    .alert-integrity {
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 9pt;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .alert-ok    { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+    .alert-fail  { background: #fff1f2; border: 1px solid #fca5a5; color: #991b1b; }
+    .alert-warn  { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    .doc-footer {
+      padding: 12px 40px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .doc-footer p {
+      font-size: 7.5pt;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Print Button (hidden in print) ──────────────────────────────── */
+    .no-print {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    .btn-print {
+      padding: 10px 20px;
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(14,165,233,.35);
+      transition: background .2s;
+    }
+    .btn-print:hover { background: #0284c7; }
+    .btn-back {
+      padding: 10px 16px;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-back:hover { color: white; }
+
+    /* ── Print Media ─────────────────────────────────────────────────── */
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; font-size: 9pt; }
+      .page { max-width: 100%; min-height: auto; }
+      .section { break-inside: avoid; }
+      .coc-table tbody tr { break-inside: avoid; }
+      @page {
+        margin: 15mm 12mm;
+        size: A4 portrait;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Classification Banner -->
+  <div class="classification-banner">
+    ⚠ {{ case.classification }} — Law Enforcement Sensitive — Authorized Personnel Only ⚠
+  </div>
+
+  <!-- Document Header -->
+  <div class="doc-header">
+    <div class="doc-header-left">
+      <div style="font-size:9pt;font-family:'JetBrains Mono',monospace;color:#0ea5e9;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">
+        Digital Evidence Management System
+      </div>
+      <div class="doc-title">Chain of Custody</div>
+      <div class="doc-title" style="color:#0ea5e9;">Dossier</div>
+      <div class="doc-subtitle">ISO/IEC 27037 · NIST SP 800-86 Compliant</div>
+    </div>
+    <div class="doc-header-right">
+      <div class="doc-number">
+        <div><strong>Document Type:</strong> CoC Form</div>
+        <div><strong>Evidence Tag:</strong> {{ ev.evidence_tag }}</div>
+        <div><strong>Case Number:</strong> {{ case.case_number }}</div>
+        <div><strong>Generated:</strong> {{ generated_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</div>
+        <div><strong>Generated By:</strong> {{ current_user.full_name or current_user.username }}</div>
+        <div><strong>Document ID:</strong> <span style="font-family:'JetBrains Mono',monospace;font-size:7.5pt;">{{ ev.evidence_tag }}-DOC-{{ generated_at.strftime('%Y%m%d%H%M%S') }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 1: Case Information ───────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">§1 — Case Information</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Case Number</div>
+        <div class="info-value mono">{{ case.case_number }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Case Title</div>
+        <div class="info-value">{{ case.title }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Status</div>
+        <div class="info-value">{{ case.status.value }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Priority</div>
+        <div class="info-value">{{ case.priority.value }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Jurisdiction</div>
+        <div class="info-value">{{ case.jurisdiction or '—' }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Incident Date</div>
+        <div class="info-value">{{ case.incident_date.strftime('%d %B %Y') if case.incident_date else '—' }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Lead Investigator</div>
+        <div class="info-value">
+          {{ (case.lead_investigator.full_name or case.lead_investigator.username) if case.lead_investigator else '—' }}
+          {% if case.lead_investigator and case.lead_investigator.badge_number %}
+          (Badge: {{ case.lead_investigator.badge_number }})
+          {% endif %}
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Classification</div>
+        <div class="info-value">{{ case.classification }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 2: Evidence Item Details ─────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">§2 — Evidence Item Details</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Evidence Tag</div>
+        <div class="info-value mono">{{ ev.evidence_tag }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Evidence Title</div>
+        <div class="info-value">{{ ev.title }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Evidence Type</div>
+        <div class="info-value">{{ ev.evidence_type.value }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Original Filename</div>
+        <div class="info-value mono">{{ ev.original_filename }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">File Size</div>
+        <div class="info-value">{{ ev.file_size_human }} ({{ '{:,}'.format(ev.file_size_bytes) }} bytes)</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Date/Time Ingested (UTC)</div>
+        <div class="info-value mono">{{ ev.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Ingested By</div>
+        <div class="info-value">
+          {{ (ev.uploaded_by.full_name or ev.uploaded_by.username) if ev.uploaded_by else '—' }}
+          {% if ev.uploaded_by and ev.uploaded_by.badge_number %} ({{ ev.uploaded_by.badge_number }}){% endif %}
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Current Custodian</div>
+        <div class="info-value">
+          {{ (ev.current_custodian.full_name or ev.current_custodian.username) if ev.current_custodian else '—' }}
+          {% if ev.current_custodian and ev.current_custodian.badge_number %} ({{ ev.current_custodian.badge_number }}){% endif %}
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Lock Status</div>
+        <div class="info-value">{{ 'CHECKED OUT (Locked)' if ev.is_locked else 'Available (In Vault)' }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Integrity Status</div>
+        <div class="info-value {% if ev.last_verified_status.value == 'Verified' %}status-verified{% elif ev.last_verified_status.value == 'Tamper Detected' %}status-tampered{% else %}status-unverified{% endif %}">
+          {{ ev.last_verified_status.value }}
+          {% if ev.last_verified_at %}({{ ev.last_verified_at.strftime('%Y-%m-%d %H:%M UTC') }}){% endif %}
+        </div>
+      </div>
+    </div>
+    {% if ev.notes %}
+    <div style="margin-top:12px;">
+      <div class="info-label">Notes / Collection Notes</div>
+      <div style="margin-top:4px;padding:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;font-size:9pt;color:#1e293b;">
+        {{ ev.notes }}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Section 3: Cryptographic Integrity ───────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">§3 — Cryptographic Integrity (Baseline Intake Hashes)</div>
+
+    {% if ev.last_verified_status.value == 'Verified' %}
+    <div class="alert-integrity alert-ok">✓ INTEGRITY VERIFIED — Evidence hash matches baseline intake. Evidence is unaltered.</div>
+    {% elif ev.last_verified_status.value == 'Tamper Detected' %}
+    <div class="alert-integrity alert-fail">⚠ WARNING: TAMPER DETECTED — Current hash does not match baseline. Evidence may be compromised.</div>
+    {% else %}
+    <div class="alert-integrity alert-warn">△ NOT YET VERIFIED — Integrity sentinel has not been run since last system restart.</div>
+    {% endif %}
+
+    <div class="hash-block">
+      <div class="hash-label">SHA-256 (Primary — Baseline Intake)</div>
+      <div class="hash-value">{{ ev.sha256_intake or '—' }}</div>
+    </div>
+    <div class="hash-block amber">
+      <div class="hash-label">MD5 (Supplementary)</div>
+      <div class="hash-value">{{ ev.md5_intake or '—' }}</div>
+    </div>
+    <div class="hash-block purple">
+      <div class="hash-label">SHA-512 (Extended Verification)</div>
+      <div class="hash-value">{{ ev.sha512_intake or '—' }}</div>
+    </div>
+
+    <div style="font-size:7.5pt;color:#94a3b8;font-family:'JetBrains Mono',monospace;margin-top:8px;">
+      Encryption: AES-256-GCM | Key Derivation: PBKDF2-HMAC-SHA256 (600,000 iterations) | Vault: Isolated encrypted storage
+    </div>
+  </div>
+
+  <!-- ── Section 4: Chain of Custody Event Log ────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">§4 — Chain of Custody Event Log ({{ coc_logs|length }} Events)</div>
+
+    {% set action_badge_map = {
+      'INGESTION': 'badge-ingestion', 'ANALYSIS_RUN': 'badge-analysis',
+      'CHECK_OUT': 'badge-checkout', 'CHECK_IN': 'badge-checkin',
+      'TRANSFER_CUSTODY': 'badge-transfer', 'INTEGRITY_CHECK': 'badge-integrity',
+      'COURT_EXHIBIT_EXPORT': 'badge-court', 'ACCESS_VIEW': 'badge-access',
+      'DOWNLOAD': 'badge-download', 'DISPOSITION': 'badge-disposition',
+    } %}
+
+    <table class="coc-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Timestamp (UTC)</th>
+          <th>Actor / Badge</th>
+          <th>Action</th>
+          <th>Purpose / Notes</th>
+          <th>SHA-256 (Recorded)</th>
+          <th>Verify Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in coc_logs %}
+        {% set badge_cls = action_badge_map.get(log.action.value, 'badge-access') %}
+        <tr>
+          <td class="mono-cell" style="color:#94a3b8;">{{ loop.index }}</td>
+          <td class="mono-cell">{{ log.timestamp_utc.strftime('%Y-%m-%d\n%H:%M:%S') }}</td>
+          <td>
+            <div style="font-weight:600;font-size:8.5pt;">{{ log.actor.full_name or log.actor.username if log.actor else '—' }}</div>
+            <div class="mono-cell" style="color:#94a3b8;font-size:7pt;">{{ log.actor.badge_number if log.actor and log.actor.badge_number else '—' }}</div>
+          </td>
+          <td>
+            <span class="action-badge {{ badge_cls }}">{{ log.action.value.replace('_',' ') }}</span>
+          </td>
+          <td style="max-width:160px;">{{ log.purpose or '—' }}</td>
+          <td class="mono-cell" style="font-size:6.5pt;color:#475569;max-width:80px;word-break:break-all;">
+            {{ log.recorded_sha256[:24] + '…' if log.recorded_sha256 else '—' }}
+          </td>
+          <td class="mono-cell">
+            <span class="{% if log.verification_status.value == 'Verified' %}status-verified{% elif log.verification_status.value == 'Tamper Detected' %}status-tampered{% else %}status-unverified{% endif %}">
+              {{ log.verification_status.value }}
+            </span>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">No chain of custody events recorded.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Section 5: Signature Blocks ──────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">§5 — Authorization & Signature</div>
+    <div style="margin-bottom:16px;font-size:9pt;color:#475569;">
+      The undersigned certify that the information recorded in this Chain of Custody document
+      is true, accurate, and complete to the best of their knowledge, and that the evidence
+      item described herein was handled in accordance with established forensic procedures.
+    </div>
+
+    <div class="sig-section">
+      <!-- Released By -->
+      <div class="sig-block">
+        <div class="sig-label">Released / Submitted By</div>
+        <div class="sig-field">
+          <p>Full Name (Print):</p>
+          <div class="line"></div>
+        </div>
+        <div class="sig-field">
+          <p>Badge / Employee Number:</p>
+          <div class="line"></div>
+        </div>
+        <div class="sig-field">
+          <p>Department / Unit:</p>
+          <div class="line"></div>
+        </div>
+        <div class="sig-field">
+          <p>Date:</p>
+          <div class="line"></div>
+        </div>
+        <div style="margin-top:30px;">
+          <div class="sig-line"></div>
+          <div class="sig-sublabel">Authorized Signature</div>
+        </div>
+      </div>
+
+      <!-- Received By -->
+      <div class="sig-block">
+        <div class="sig-label">Received By</div>
+        <div class="sig-field">
+          <p>Full Name (Print):</p>
+          <div class="line"></div>
+        </div>
+        <div class="sig-field">
+          <p>Badge / Employee Number:</p>
+          <div class="line"></div>
+        </div>
+        <div class="sig-field">
+          <p>Department / Unit:</p>
+          <div class="line"></div>
+        </div>
+        <div class="sig-field">
+          <p>Date / Time Received:</p>
+          <div class="line"></div>
+        </div>
+        <div style="margin-top:30px;">
+          <div class="sig-line"></div>
+          <div class="sig-sublabel">Authorized Signature</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Witness -->
+    <div style="margin-top:24px;padding-top:16px;border-top:1px dashed #e2e8f0;">
+      <div class="sig-label">Witness (if applicable)</div>
+      <div class="sig-section">
+        <div class="sig-block">
+          <div class="sig-field"><p>Name:</p><div class="line"></div></div>
+          <div style="margin-top:12px;"><div class="sig-line"></div><div class="sig-sublabel">Witness Signature</div></div>
+        </div>
+        <div class="sig-block">
+          <div class="sig-field"><p>Date:</p><div class="line"></div></div>
+          <div style="margin-top:12px;"><div class="sig-line"></div><div class="sig-sublabel">Date</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Footer -->
+  <div class="doc-footer">
+    <p>T.R.I.A.D. - Telecom Records and Intelligence Analysis Dashboard — Digital Evidence Management System</p>
+    <p>{{ case.case_number }} / {{ ev.evidence_tag }} / Generated: {{ generated_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}</p>
+    <p>ISO/IEC 27037:2012 · NIST SP 800-86</p>
+  </div>
+
+</div><!-- /page -->
+
+<!-- Print / Back Buttons (hidden on print) -->
+<div class="no-print">
+  <button class="btn-back" onclick="window.history.back()">← Back</button>
+  <button class="btn-print" onclick="window.print()">🖨 Print / Save as PDF</button>
+</div>
+
+</body>
+</html>

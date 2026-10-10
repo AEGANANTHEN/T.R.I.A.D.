@@ -1,0 +1,1117 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Forensic Investigation Dossier — TRIAD
+{% endblock %}
+
+{% block content %}
+
+<div class="space-y-6">
+
+    <!-- ========================================================= -->
+    <!-- HEADER                                                    -->
+    <!-- ========================================================= -->
+
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+
+        <div>
+            <div class="flex items-center gap-3">
+
+                <div class="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
+                    <i
+                        data-lucide="file-lock-2"
+                        class="w-5 h-5 text-white"
+                    ></i>
+                </div>
+
+                <div>
+                    <div class="flex items-center gap-2">
+
+                        <h1 class="text-2xl font-bold text-white">
+                            Forensic Investigation Dossier
+                        </h1>
+
+                    </div>
+
+                    <p class="text-sm text-slate-400 mt-1">
+                        Provenance-aware forensic reporting and evidence-grounded investigation output.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+
+            {% if session_id %}
+
+            <a
+                href="/forensic-reports/{{ session_id }}/pdf"
+                class="btn btn-primary btn-sm"
+            >
+                <i data-lucide="file-down" class="w-4 h-4"></i>
+                Download PDF Dossier
+            </a>
+
+            <a
+                href="/forensic-reports/{{ session_id }}/html"
+                class="btn btn-secondary btn-sm"
+            >
+                <i data-lucide="globe" class="w-4 h-4"></i>
+                HTML
+            </a>
+
+            <a
+                href="/forensic-reports/{{ session_id }}/json"
+                class="btn btn-secondary btn-sm"
+            >
+                <i data-lucide="braces" class="w-4 h-4"></i>
+                JSON
+            </a>
+
+            <a
+                href="/forensic-reports/{{ session_id }}/csv"
+                class="btn btn-secondary btn-sm"
+            >
+                <i data-lucide="table-2" class="w-4 h-4"></i>
+                CSV
+            </a>
+
+            <a
+                href="/forensic-reports/{{ session_id }}/xlsx"
+                class="btn btn-success btn-sm"
+            >
+                <i data-lucide="sheet" class="w-4 h-4"></i>
+                Excel (.XLSX)
+            </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- FORENSIC SAFETY NOTICE                                    -->
+    <!-- ========================================================= -->
+
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+
+        <div class="flex items-start gap-3">
+
+            <div class="mt-0.5">
+                <i
+                    data-lucide="shield-alert"
+                    class="w-5 h-5 text-amber-600"
+                ></i>
+            </div>
+
+            <div>
+
+                <h3 class="font-semibold text-amber-900 text-sm">
+                    Forensic Handling Notice
+                </h3>
+
+                <p class="text-xs text-amber-800 mt-1 leading-5">
+                    This dossier contains analytical findings derived from evidence
+                    available to TRIAD at report-generation time. Analytical signals
+                    are investigative indicators and must not be treated as standalone
+                    proof of criminal conduct.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- REPORT METADATA                                           -->
+    <!-- ========================================================= -->
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+
+            <div class="flex items-center justify-between">
+
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Report ID
+                </span>
+
+                <i
+                    data-lucide="fingerprint"
+                    class="w-4 h-4 text-slate-400"
+                ></i>
+
+            </div>
+
+            <div class="mt-3 text-sm font-bold text-slate-900 break-all">
+                {{ payload.report_id or "—" }}
+            </div>
+
+        </div>
+
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+
+            <div class="flex items-center justify-between">
+
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Target
+                </span>
+
+                <i
+                    data-lucide="target"
+                    class="w-4 h-4 text-slate-400"
+                ></i>
+
+            </div>
+
+            <div class="mt-3 text-sm font-bold text-slate-900 break-all">
+                {{ payload.source.target or "—" }}
+            </div>
+
+        </div>
+
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+
+            <div class="flex items-center justify-between">
+
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Session
+                </span>
+
+                <i
+                    data-lucide="database"
+                    class="w-4 h-4 text-slate-400"
+                ></i>
+
+            </div>
+
+            <div class="mt-3 text-sm font-bold text-slate-900 break-all">
+                {{ payload.session_id or "—" }}
+            </div>
+
+        </div>
+
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+
+            <div class="flex items-center justify-between">
+
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Generated
+                </span>
+
+                <i
+                    data-lucide="clock-3"
+                    class="w-4 h-4 text-slate-400"
+                ></i>
+
+            </div>
+
+            <div class="mt-3 text-sm font-bold text-slate-900">
+                {{ payload.generated_at or "—" }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- EXECUTIVE SUMMARY                                        -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <i
+                        data-lucide="clipboard-list"
+                        class="w-5 h-5 text-blue-600"
+                    ></i>
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        Executive Summary
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Key indicators generated from the investigation dataset.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6">
+
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+
+                {% set summary = payload.summary or {} %}
+
+                <div class="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                    <div class="text-xs text-slate-500">
+                        Total Records
+                    </div>
+                    <div class="text-xl font-bold text-slate-900 mt-1">
+                        {{ summary.total_records or 0 }}
+                    </div>
+                </div>
+
+                <div class="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                    <div class="text-xs text-slate-500">
+                        Unique Entities
+                    </div>
+                    <div class="text-xl font-bold text-slate-900 mt-1">
+                        {{ summary.unique_entities or 0 }}
+                    </div>
+                </div>
+
+                <div class="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                    <div class="text-xs text-slate-500">
+                        Active Days
+                    </div>
+                    <div class="text-xl font-bold text-slate-900 mt-1">
+                        {{ summary.active_days or 0 }}
+                    </div>
+                </div>
+
+                <div class="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                    <div class="text-xs text-slate-500">
+                        Peak Hour
+                    </div>
+                    <div class="text-xl font-bold text-slate-900 mt-1">
+                        {{ summary.peak_hour or "—" }}
+                    </div>
+                </div>
+
+                <div class="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                    <div class="text-xs text-slate-500">
+                        Signal Score
+                    </div>
+                    <div class="text-xl font-bold text-blue-700 mt-1">
+                        {{ summary.signal_score or 0 }}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- PROVENANCE                                                -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <i
+                        data-lucide="badge-check"
+                        class="w-5 h-5 text-emerald-600"
+                    ></i>
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        Evidence Provenance
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Traceability information associated with this dossier.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6 space-y-4">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Classification
+                    </div>
+
+                    <div class="mt-2 text-sm font-semibold text-slate-900">
+                        {{ payload.classification or "—" }}
+                    </div>
+
+                </div>
+
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Analysis Mode
+                    </div>
+
+                    <div class="mt-2 text-sm font-semibold text-slate-900">
+                        {{ payload.source.analysis_mode or "—" }}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="rounded-lg border border-slate-200 overflow-hidden">
+
+                <div class="px-4 py-3 bg-slate-50 border-b border-slate-200">
+
+                    <span class="text-sm font-semibold text-slate-800">
+                        Source Files
+                    </span>
+
+                </div>
+
+                <div class="p-4">
+
+                    {% if payload.source.filenames %}
+
+                    <div class="space-y-2">
+
+                        {% for filename in payload.source.filenames %}
+
+                        <div class="flex items-center gap-2 text-sm text-slate-700">
+
+                            <i
+                                data-lucide="file"
+                                class="w-4 h-4 text-slate-400"
+                            ></i>
+
+                            <span class="break-all">
+                                {{ filename }}
+                            </span>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% else %}
+
+                    <span class="text-sm text-slate-400">
+                        No source filename recorded.
+                    </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <div class="rounded-lg border border-slate-200 overflow-hidden">
+
+                <div class="px-4 py-3 bg-slate-50 border-b border-slate-200">
+
+                    <span class="text-sm font-semibold text-slate-800">
+                        SHA-256 Evidence Fingerprints
+                    </span>
+
+                </div>
+
+                <div class="p-4">
+
+                    {% if payload.source.sha256 %}
+
+                    <div class="space-y-2">
+
+                        {% for digest in payload.source.sha256 %}
+
+                        <div class="font-mono text-xs text-slate-600 bg-slate-50 rounded-lg p-3 break-all">
+                            {{ digest }}
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% else %}
+
+                    <span class="text-sm text-slate-400">
+                        No SHA-256 fingerprint available.
+                    </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+                <div class="rounded-lg bg-emerald-50 border border-emerald-200 p-4">
+
+                    <div class="flex items-center gap-2">
+
+                        <i
+                            data-lucide="lock-keyhole"
+                            class="w-4 h-4 text-emerald-600"
+                        ></i>
+
+                        <span class="text-sm font-semibold text-emerald-900">
+                            Raw Evidence
+                        </span>
+
+                    </div>
+
+                    <p class="text-xs text-emerald-700 mt-2">
+                        Preserved.
+                    </p>
+
+                </div>
+
+
+                <div class="rounded-lg bg-blue-50 border border-blue-200 p-4">
+
+                    <div class="flex items-center gap-2">
+
+                        <i
+                            data-lucide="sigma"
+                            class="w-4 h-4 text-blue-600"
+                        ></i>
+
+                        <span class="text-sm font-semibold text-blue-900">
+                            Analytics
+                        </span>
+
+                    </div>
+
+                    <p class="text-xs text-blue-700 mt-2">
+                        Derived from TRIAD analytics.
+                    </p>
+
+                </div>
+
+
+                <div class="rounded-lg bg-violet-50 border border-violet-200 p-4">
+
+                    <div class="flex items-center gap-2">
+
+                        <i
+                            data-lucide="brain-circuit"
+                            class="w-4 h-4 text-violet-600"
+                        ></i>
+
+                        <span class="text-sm font-semibold text-violet-900">
+                            AI
+                        </span>
+
+                    </div>
+
+                    <p class="text-xs text-violet-700 mt-2">
+                        Interpretive only.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- INVESTIGATION LEADS                                      -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center justify-between gap-4">
+
+                <div class="flex items-center gap-3">
+
+                    <div class="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center">
+                        <i
+                            data-lucide="triangle-alert"
+                            class="w-5 h-5 text-rose-600"
+                        ></i>
+                    </div>
+
+                    <div>
+
+                        <h2 class="font-bold text-slate-900">
+                            Investigation Leads
+                        </h2>
+
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Evidence-derived indicators requiring analyst review.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
+                    {{ payload.leads|length }} leads
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="overflow-x-auto">
+
+            <table class="min-w-full text-sm">
+
+                <thead class="bg-slate-50 border-b border-slate-200">
+
+                    <tr>
+
+                        <th class="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Severity
+                        </th>
+
+                        <th class="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Type
+                        </th>
+
+                        <th class="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Investigation Lead
+                        </th>
+
+                        <th class="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Basis
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody class="divide-y divide-slate-100">
+
+                    {% if payload.leads %}
+
+                    {% for lead in payload.leads %}
+
+                    <tr class="hover:bg-slate-50 transition">
+
+                        <td class="px-5 py-4 whitespace-nowrap">
+
+                            {% set severity = (lead.severity or "INFO")|upper %}
+
+                            {% if severity in ["CRITICAL", "HIGH"] %}
+
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                                {{ severity }}
+                            </span>
+
+                            {% elif severity == "MEDIUM" %}
+
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                {{ severity }}
+                            </span>
+
+                            {% else %}
+
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                {{ severity }}
+                            </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td class="px-5 py-4 text-slate-600">
+                            {{ lead.type or "ANALYTICAL" }}
+                        </td>
+
+                        <td class="px-5 py-4">
+
+                            <div class="font-semibold text-slate-900">
+                                {{ lead.title or "Unnamed lead" }}
+                            </div>
+
+                            {% if lead.detail %}
+
+                            <div class="text-xs text-slate-500 mt-1 max-w-xl">
+                                {{ lead.detail }}
+                            </div>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td class="px-5 py-4 text-xs text-slate-500 max-w-md">
+                            {{ lead.basis or "Evidence-derived analytical signal." }}
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                    {% else %}
+
+                    <tr>
+
+                        <td
+                            colspan="4"
+                            class="px-5 py-10 text-center"
+                        >
+
+                            <div class="flex flex-col items-center">
+
+                                <i
+                                    data-lucide="circle-check"
+                                    class="w-8 h-8 text-emerald-500"
+                                ></i>
+
+                                <p class="font-semibold text-slate-700 mt-3">
+                                    No investigation leads generated
+                                </p>
+
+                                <p class="text-xs text-slate-400 mt-1">
+                                    No additional analytical indicators were available.
+                                </p>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- AI INTELLIGENCE                                          -->
+    <!-- ========================================================= -->
+
+    {% set ai = payload.ai_intelligence or {} %}
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center">
+                    <i
+                        data-lucide="brain-circuit"
+                        class="w-5 h-5 text-violet-600"
+                    ></i>
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        AI Intelligence
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Interpretive assistance based on existing TRIAD evidence and analytics.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                        Provider
+                    </div>
+
+                    <div class="mt-2 text-sm font-bold text-slate-900">
+                        {{ ai.provider or "Not available" }}
+                    </div>
+
+                </div>
+
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                        Model
+                    </div>
+
+                    <div class="mt-2 text-sm font-bold text-slate-900">
+                        {{ ai.model or "Not available" }}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="rounded-xl bg-violet-50 border border-violet-200 p-5">
+
+                <div class="flex items-center gap-2 mb-3">
+
+                    <i
+                        data-lucide="sparkles"
+                        class="w-4 h-4 text-violet-600"
+                    ></i>
+
+                    <span class="text-sm font-semibold text-violet-900">
+                        AI Assessment
+                    </span>
+
+                </div>
+
+                <div class="text-sm text-violet-950 leading-6 whitespace-pre-line">
+                    {{ ai.assessment or ai.ai_summary or "No additional AI narrative was generated." }}
+                </div>
+
+            </div>
+
+
+            <div class="mt-4 flex items-start gap-2 text-xs text-slate-500">
+
+                <i
+                    data-lucide="info"
+                    class="w-4 h-4 flex-shrink-0 mt-0.5"
+                ></i>
+
+                <span>
+                    AI output is interpretive assistance only and does not replace
+                    verified evidence, Chain of Custody records, or analyst judgment.
+                </span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- ANALYTICS SECTIONS                                       -->
+    <!-- ========================================================= -->
+
+    {% set intelligence_sections = [
+        ("Communication Intelligence", "communication", "phone"),
+        ("Temporal Intelligence", "temporal", "clock-3"),
+        ("Geographic Intelligence", "geographic", "map-pin"),
+        ("Network Intelligence", "network", "network"),
+        ("Cross-Evidence Intelligence", "cross_match", "git-compare")
+    ] %}
+
+
+    {% for section_title, section_key, icon_name in intelligence_sections %}
+
+    {% set section_data = payload[section_key] or {} %}
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+
+                    <i
+                        data-lucide="{{ icon_name }}"
+                        class="w-5 h-5 text-slate-600"
+                    ></i>
+
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        {{ section_title }}
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Structured analytical output from TRIAD.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6">
+
+            {% if section_data %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+
+                {% for key, value in section_data.items() %}
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                        {{ key.replace("_", " ").title() }}
+                    </div>
+
+                    <div class="mt-2 text-sm text-slate-700 break-words">
+
+                        {% if value is mapping or value is sequence and value is not string %}
+
+                        <pre class="text-xs bg-slate-50 border border-slate-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">{{ value | tojson(indent=2) }}</pre>
+
+                        {% else %}
+
+                        {{ value }}
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+            {% else %}
+
+            <div class="text-sm text-slate-400 py-5 text-center">
+                No derived analytical data available.
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+    {% endfor %}
+
+
+    <!-- ========================================================= -->
+    <!-- REPORT INTEGRITY / LIMITATIONS                            -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+                    <i
+                        data-lucide="shield-check"
+                        class="w-5 h-5 text-slate-600"
+                    ></i>
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        Forensic Limitations & Controls
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Controls applied to the forensic reporting workflow.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-slate-50 border border-slate-200">
+
+                    <i
+                        data-lucide="database"
+                        class="w-5 h-5 text-slate-500 flex-shrink-0"
+                    ></i>
+
+                    <div>
+
+                        <div class="font-semibold text-slate-800 text-sm">
+                            Original Evidence
+                        </div>
+
+                        <p class="text-xs text-slate-500 mt-1">
+                            Reporting reads analytical results and does not modify original evidence.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-slate-50 border border-slate-200">
+
+                    <i
+                        data-lucide="fingerprint"
+                        class="w-5 h-5 text-slate-500 flex-shrink-0"
+                    ></i>
+
+                    <div>
+
+                        <div class="font-semibold text-slate-800 text-sm">
+                            Evidence Fingerprints
+                        </div>
+
+                        <p class="text-xs text-slate-500 mt-1">
+                            SHA-256 provenance information is included when available.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-slate-50 border border-slate-200">
+
+                    <i
+                        data-lucide="history"
+                        class="w-5 h-5 text-slate-500 flex-shrink-0"
+                    ></i>
+
+                    <div>
+
+                        <div class="font-semibold text-slate-800 text-sm">
+                            Chain of Custody
+                        </div>
+
+                        <p class="text-xs text-slate-500 mt-1">
+                            DEMS audit and Chain-of-Custody controls remain authoritative.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-slate-50 border border-slate-200">
+
+                    <i
+                        data-lucide="brain-circuit"
+                        class="w-5 h-5 text-slate-500 flex-shrink-0"
+                    ></i>
+
+                    <div>
+
+                        <div class="font-semibold text-slate-800 text-sm">
+                            AI Boundary
+                        </div>
+
+                        <p class="text-xs text-slate-500 mt-1">
+                            AI assists interpretation but cannot establish unsupported facts.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- FOOTER ACTIONS                                           -->
+    <!-- ========================================================= -->
+
+    {% if session_id %}
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+
+        <div class="text-xs text-slate-400">
+            TRIAD Forensic Report • Report generated {{ payload.generated_at or "—" }}
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+
+            <a
+                href="/security-validation"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
+            >
+                <i
+                    data-lucide="shield-check"
+                    class="w-4 h-4"
+                ></i>
+                Security Validation
+            </a>
+
+            <a
+                href="/forensic-reports/{{ session_id }}/pdf"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition"
+            >
+                <i
+                    data-lucide="download"
+                    class="w-4 h-4"
+                ></i>
+                Download Dossier
+            </a>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+
+});
+</script>
+
+{% endblock %}

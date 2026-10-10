@@ -1,0 +1,345 @@
+{% extends "layout.html" %}
+
+{% block title %}CDR Upload — Forensic Intelligence Platform{% endblock %}
+{% block page_title %}Upload CDR File{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+
+  <!-- ── Hero Header ─────────────────────────────────────────────── -->
+  <div class="text-center pt-6">
+    <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyber-cyan/10 border border-cyber-cyan/30 rounded-full text-cyber-cyan text-xs font-mono tracking-wider mb-4">
+      <div class="beacon beacon-blue"></div>
+      FORENSIC CDR ANALYSIS ENGINE
+    </div>
+    <h1 class="text-3xl font-bold text-white mb-2">T.R.I.A.D. - Telecom Records and Intelligence Analysis Dashboard</h1>
+    <p class="text-slate-400 text-sm max-w-xl mx-auto">
+      Upload Call Detail Records for automated forensic analysis, link analysis, geo-spatial tracking,
+      and anomaly detection. Law-enforcement grade chain of custody included.
+    </p>
+  </div>
+
+  <!-- ── Tab Navigation ──────────────────────────────────────────── -->
+  <div class="relative">
+    <div class="flex border-b border-cyber-border gap-1" id="tab-nav">
+      <button onclick="switchTab('single')" id="tab-single"
+              class="tab-btn active px-5 py-2.5 text-sm font-medium transition-all duration-200 border-b-2">
+        <i data-lucide="file-search" class="w-4 h-4 inline mr-2"></i>
+        Single CDR Analysis
+      </button>
+      <button onclick="switchTab('multi')" id="tab-multi"
+              class="tab-btn px-5 py-2.5 text-sm font-medium transition-all duration-200 border-b-2">
+        <i data-lucide="layers" class="w-4 h-4 inline mr-2"></i>
+        Multi-CDR Cross Match
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- TAB: SINGLE CDR                                                -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div id="panel-single">
+    <form action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data" id="single-form">
+
+      <!-- Drop Zone -->
+      <div id="drop-zone-single"
+           class="drop-zone border-2 border-dashed border-cyber-border rounded-xl p-12 text-center cursor-pointer hover:border-cyber-cyan/50 hover:bg-cyber-cyan/5 transition-all duration-300 bg-cyber-card group"
+           onclick="document.getElementById('file-single').click()"
+           ondrop="handleDrop(event, 'single')"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)">
+        <input type="file" id="file-single" name="cdr_file" accept=".csv,.xlsx,.xls" class="hidden" onchange="handleFileSelect(event, 'single')" />
+
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-16 h-16 bg-cyber-surface border border-cyber-border rounded-2xl flex items-center justify-center group-hover:border-cyber-cyan/40 transition-all duration-300">
+            <i data-lucide="upload-cloud" class="w-8 h-8 text-slate-500 group-hover:text-cyber-cyan transition-colors"></i>
+          </div>
+          <div>
+            <p class="text-white font-semibold mb-1">Drop your CDR file here</p>
+            <p class="text-slate-500 text-sm">or click to browse • Supports <span class="text-cyber-cyan font-mono">.CSV</span>, <span class="text-cyber-cyan font-mono">.XLS</span>, <span class="text-cyber-cyan font-mono">.XLSX</span></p>
+          </div>
+
+          <!-- File Preview -->
+          <div id="file-preview-single" class="hidden">
+            <div class="flex items-center gap-3 bg-cyber-emerald/10 border border-cyber-emerald/30 rounded-lg px-4 py-2">
+              <i data-lucide="file-check" class="w-4 h-4 text-cyber-emerald"></i>
+              <span class="text-cyber-emerald text-sm font-mono" id="file-name-single"></span>
+              <span class="text-slate-500 text-xs" id="file-size-single"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Target & Metadata -->
+      <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="glass-card p-4">
+          <label class="block text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">
+            <i data-lucide="phone" class="w-3 h-3 inline mr-1"></i>
+            Target Number (Optional)
+          </label>
+          <input type="text" name="target_number" placeholder="+91XXXXXXXXXX or auto-detect"
+                 class="w-full bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyber-cyan/50 focus:ring-1 focus:ring-cyber-cyan/20 transition-all font-mono" />
+          <p class="text-xs text-slate-600 mt-1">Leave blank to auto-detect from highest call frequency</p>
+        </div>
+        <div class="glass-card p-4">
+          <label class="block text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">
+            <i data-lucide="hash" class="w-3 h-3 inline mr-1"></i>
+            Case Reference (Optional)
+          </label>
+          <input type="text" name="case_ref" placeholder="e.g. CASE-2024-001"
+                 class="w-full bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyber-cyan/50 focus:ring-1 focus:ring-cyber-cyan/20 transition-all font-mono" />
+          <p class="text-xs text-slate-600 mt-1">For forensic chain of custody tracking</p>
+        </div>
+      </div>
+
+      <!-- Features Preview -->
+      <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {% for feature in [
+          ("shield-check", "SHA-256 Hash", "Forensic chain of custody"),
+          ("network", "Link Analysis", "Vis.js social network graph"),
+          ("map-pin", "Geo Tracking", "Tower trajectory mapping"),
+          ("zap", "Anomaly Detection", "Speed & device swap alerts")
+        ] %}
+        <div class="glass-card p-3 text-center">
+          <i data-lucide="{{ feature[0] }}" class="w-5 h-5 text-cyber-cyan mx-auto mb-2"></i>
+          <p class="text-xs font-semibold text-white">{{ feature[1] }}</p>
+          <p class="text-[10px] text-slate-500 mt-0.5">{{ feature[2] }}</p>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" id="submit-single"
+              class="mt-6 w-full py-3 px-6 bg-cyber-cyan text-cyber-bg font-bold rounded-xl hover:bg-cyber-cyan/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm tracking-wide uppercase shadow-lg shadow-cyber-cyan/20">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        <span id="submit-single-text">Analyze CDR File</span>
+        <div id="submit-single-spinner" class="hidden">
+          <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </div>
+      </button>
+    </form>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- TAB: MULTI CDR                                                 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div id="panel-multi" class="hidden">
+    <form action="{{ url_for('cross_match_route') }}" method="POST" enctype="multipart/form-data" id="multi-form">
+
+      <!-- Drop Zone Multi -->
+      <div id="drop-zone-multi"
+           class="drop-zone border-2 border-dashed border-cyber-amber/30 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-amber/60 hover:bg-cyber-amber/5 transition-all duration-300 bg-cyber-card group"
+           onclick="document.getElementById('file-multi').click()"
+           ondrop="handleDrop(event, 'multi')"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)">
+        <input type="file" id="file-multi" name="cdr_files" accept=".csv,.xlsx,.xls" multiple class="hidden" onchange="handleFileSelect(event, 'multi')" />
+
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-16 h-16 bg-cyber-surface border border-cyber-amber/30 rounded-2xl flex items-center justify-center group-hover:border-cyber-amber/60 transition-all duration-300">
+            <i data-lucide="layers" class="w-8 h-8 text-cyber-amber/60 group-hover:text-cyber-amber transition-colors"></i>
+          </div>
+          <div>
+            <p class="text-white font-semibold mb-1">Drop 2–5 CDR files for cross-analysis</p>
+            <p class="text-slate-500 text-sm">Each file = one target number • Up to <span class="text-cyber-amber font-mono">5 targets</span> simultaneously</p>
+          </div>
+
+          <!-- File List Preview -->
+          <div id="file-list-multi" class="w-full max-w-sm space-y-2 hidden"></div>
+        </div>
+      </div>
+
+      <!-- Target Numbers -->
+      <div class="mt-6 glass-card p-4">
+        <label class="block text-xs font-mono text-slate-400 uppercase tracking-wider mb-3">
+          <i data-lucide="users" class="w-3 h-3 inline mr-1"></i>
+          Target Numbers (comma-separated, in file order)
+        </label>
+        <input type="text" name="targets" placeholder="+91XXXXXXXXXX, +91YYYYYYYYYY, +91ZZZZZZZZZZ"
+               class="w-full bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyber-amber/50 focus:ring-1 focus:ring-cyber-amber/20 transition-all font-mono" />
+        <p class="text-xs text-slate-600 mt-1">Order must match uploaded file order. Leave blank to auto-detect.</p>
+      </div>
+
+      <!-- Cross-match features -->
+      <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {% for feature in [
+          ("git-merge", "Common Contacts", "Mutual communicators across all targets", "#f59e0b"),
+          ("map", "Co-location", "Tower convergence within ±15 min window", "#f59e0b"),
+          ("bar-chart-3", "Comparison Matrix", "Side-by-side KPI analysis for all targets", "#f59e0b")
+        ] %}
+        <div class="glass-card p-4 border-l-2" style="border-left-color: {{ feature[3] }};">
+          <i data-lucide="{{ feature[0] }}" class="w-5 h-5 mb-2" style="color: {{ feature[3] }};"></i>
+          <p class="text-sm font-semibold text-white mb-1">{{ feature[1] }}</p>
+          <p class="text-xs text-slate-500">{{ feature[2] }}</p>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" id="submit-multi"
+              class="mt-6 w-full py-3 px-6 bg-cyber-amber text-cyber-bg font-bold rounded-xl hover:bg-cyber-amber/90 transition-all duration-200 flex items-center justify-center gap-2 text-sm tracking-wide uppercase shadow-lg shadow-cyber-amber/20">
+        <i data-lucide="git-fork" class="w-4 h-4"></i>
+        Run Cross-Match Analysis
+      </button>
+    </form>
+  </div>
+
+  <!-- ── Info Bar ─────────────────────────────────────────────────── -->
+  <div class="glass-card p-4">
+    <div class="flex items-start gap-3">
+      <i data-lucide="info" class="w-4 h-4 text-cyber-cyan flex-shrink-0 mt-0.5"></i>
+      <div class="text-xs text-slate-400 space-y-1">
+        <p><strong class="text-slate-300">Supported column formats:</strong> Auto-detected across 10+ naming conventions per field (caller, receiver, timestamp, duration, call type, tower, coordinates, IMEI, IMSI).</p>
+        <p><strong class="text-slate-300">Privacy:</strong> All files are processed locally on the server. No data is transmitted to third parties.</p>
+        <p><strong class="text-slate-300">Performance:</strong> Records are capped at 5,000 for browser rendering; full analysis runs on all records.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recent Investigations Preview (if any) ────────────────── -->
+  {% if recent_history %}
+  <div class="glass-card p-5 mt-8 border-cyber-border">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="history" class="w-4 h-4 text-cyber-purple"></i>
+        <h3 class="text-xs font-mono font-bold text-white uppercase tracking-wider">Recent Investigations</h3>
+      </div>
+      <a href="{{ url_for('history_view') }}" class="text-xs font-mono text-cyber-cyan hover:underline flex items-center gap-1">
+        View All History ({{ recent_history | length }}+) &rarr;
+      </a>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for item in recent_history[:3] %}
+      <div class="bg-cyber-surface/60 border border-cyber-border rounded-lg p-3 hover:border-cyber-cyan/40 transition-all flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded {% if item.type == 'single' %}bg-cyber-cyan/15 text-cyber-cyan{% else %}bg-cyber-amber/15 text-cyber-amber{% endif %}">
+              {{ 'Single CDR' if item.type == 'single' else 'Cross-Match' }}
+            </span>
+            <span class="text-[10px] text-slate-500 font-mono">{{ item.timestamp.split(' ')[0] if item.timestamp else '' }}</span>
+          </div>
+          <p class="text-xs font-bold text-white font-mono truncate">
+            {% if item.type == 'single' %}{{ item.target }}{% else %}{{ item.targets | join(', ') }}{% endif %}
+          </p>
+          <p class="text-[10px] text-slate-400 truncate mt-0.5">{{ item.filename if item.type == 'single' else item.filenames | join(', ') }}</p>
+        </div>
+        <div class="mt-3 pt-2 border-t border-cyber-border/40 flex items-center justify-between">
+          <span class="text-[10px] text-cyber-emerald font-mono">{{ item.records_count }} rows</span>
+          {% if item.type == 'single' %}
+          <a href="{{ url_for('dashboard', session_id=item.id) }}" class="text-[11px] text-cyber-cyan font-mono hover:underline font-bold flex items-center gap-1">
+            Open &rarr;
+          </a>
+          {% else %}
+          <a href="{{ url_for('cross_match_view', session_id=item.id) }}" class="text-[11px] text-cyber-amber font-mono hover:underline font-bold flex items-center gap-1">
+            Open &rarr;
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // ── Tab Switching ───────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('panel-single').classList.toggle('hidden', tab !== 'single');
+    document.getElementById('panel-multi').classList.toggle('hidden', tab !== 'multi');
+
+    ['single', 'multi'].forEach(t => {
+      const btn = document.getElementById(`tab-${t}`);
+      if (t === tab) {
+        btn.classList.add('active', 'border-cyber-cyan', 'text-cyber-cyan');
+        btn.classList.remove('border-transparent', 'text-slate-400');
+      } else {
+        btn.classList.remove('active', 'border-cyber-cyan', 'text-cyber-cyan');
+        btn.classList.add('border-transparent', 'text-slate-400');
+      }
+    });
+    lucide.createIcons();
+  }
+
+  // Check URL parameters or template variable for tab
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get('tab') || '{{ active_tab }}' || 'single';
+  switchTab(initialTab);
+
+  // ── File Handling ───────────────────────────────────────────────
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function handleFileSelect(event, mode) {
+    const files = event.target.files;
+    updateFileDisplay(files, mode);
+  }
+
+  function updateFileDisplay(files, mode) {
+    if (mode === 'single') {
+      if (files.length > 0) {
+        const f = files[0];
+        document.getElementById('file-name-single').textContent = f.name;
+        document.getElementById('file-size-single').textContent = `(${formatBytes(f.size)})`;
+        document.getElementById('file-preview-single').classList.remove('hidden');
+        document.getElementById('drop-zone-single').classList.add('border-cyber-emerald/50', 'bg-cyber-emerald/5');
+        lucide.createIcons();
+      }
+    } else {
+      const list = document.getElementById('file-list-multi');
+      list.innerHTML = '';
+      list.classList.remove('hidden');
+      Array.from(files).forEach((f, i) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center gap-3 bg-cyber-amber/10 border border-cyber-amber/30 rounded-lg px-3 py-2';
+        item.innerHTML = `
+          <span class="text-cyber-amber text-xs font-mono font-bold">T${i + 1}</span>
+          <span class="text-xs text-slate-300 font-mono truncate flex-1">${f.name}</span>
+          <span class="text-slate-500 text-xs">${formatBytes(f.size)}</span>
+        `;
+        list.appendChild(item);
+      });
+    }
+  }
+
+  function handleDragOver(event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('drag-over');
+  }
+
+  function handleDragLeave(event) {
+    event.currentTarget.classList.remove('drag-over');
+  }
+
+  function handleDrop(event, mode) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
+    const files = event.dataTransfer.files;
+    const inputId = mode === 'single' ? 'file-single' : 'file-multi';
+    const input = document.getElementById(inputId);
+
+    // Transfer files to the actual input element via DataTransfer
+    const dt = new DataTransfer();
+    Array.from(files).forEach(f => dt.items.add(f));
+    input.files = dt.files;
+
+    updateFileDisplay(files, mode);
+  }
+
+  // ── Form Submit Spinner ─────────────────────────────────────────
+  document.getElementById('single-form').addEventListener('submit', function() {
+    document.getElementById('submit-single-text').textContent = 'Analyzing...';
+    document.getElementById('submit-single-spinner').classList.remove('hidden');
+    document.getElementById('submit-single').disabled = true;
+  });
+</script>
+{% endblock %}

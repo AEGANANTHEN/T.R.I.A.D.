@@ -1,0 +1,973 @@
+{% extends "layout.html" %}
+
+{% block title %}Forensic Dashboard — {{ data.target }} — CDR Intel{% endblock %}
+{% block page_title %}Forensic Dashboard / {{ data.target }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6" id="dashboard-root">
+
+  <!-- ── Target Header ───────────────────────────────────────────── -->
+  <div class="flex flex-wrap items-center justify-between gap-4" id="section-dashboard">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 bg-cyber-cyan/20 border border-cyber-cyan/40 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i data-lucide="phone-call" class="w-5 h-5 text-cyber-cyan"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white font-mono">{{ data.target | default('Target') }}</h1>
+        <p class="text-xs text-slate-500">{{ data.filename | default('CDR File') }} &nbsp;•&nbsp;
+          <span class="text-cyber-emerald font-mono">{{ (data.kpis.date_range if (data.kpis and data.kpis.date_range) else '—') }}</span>
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- SHA-256 Hash badge -->
+      <div class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg flex items-center gap-2">
+        <i data-lucide="lock" class="w-3.5 h-3.5 text-cyber-emerald"></i>
+        <span class="text-[10px] font-mono text-slate-500">SHA-256:</span>
+        <span class="text-[10px] font-mono text-cyber-emerald" title="{{ data.metadata.sha256 if data.metadata else '' }}">{{ (data.metadata.sha256[:16] if (data.metadata and data.metadata.sha256) else '—') }}...</span>
+      </div>
+
+      <!-- Export Report Dropdown -->
+      <div class="relative inline-block text-left" id="export-dropdown-wrapper">
+        <button onclick="toggleExportMenu()" type="button" class="px-3.5 py-1.5 bg-cyber-cyan/15 border border-cyber-cyan/40 rounded-lg text-xs font-mono font-bold text-cyber-cyan hover:bg-cyber-cyan/25 transition-all flex items-center gap-1.5 shadow-md shadow-cyber-cyan/10">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          Export Report ▾
+        </button>
+        <div id="export-menu" class="hidden absolute right-0 mt-2 w-56 bg-cyber-card border border-cyber-border rounded-xl shadow-2xl py-2 z-50 font-mono text-xs">
+          <a href="{{ url_for('report_view', session_id=session_id) }}" target="_blank" onclick="closeExportMenu()" class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+            <i data-lucide="printer" class="w-4 h-4 text-cyber-cyan"></i>
+            <div>
+              <div class="font-bold">Printable PDF Dossier</div>
+              <div class="text-[10px] text-slate-500">Official Forensic Print/PDF</div>
+            </div>
+          </a>
+          <a href="{{ url_for('export_excel', session_id=session_id) }}" download="CDR_Forensic_Report_{{ session_id[:8] }}.xlsx" onclick="handleExportClick(event, 'Excel Workbook (.XLSX)')" class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-cyber-emerald"></i>
+            <div>
+              <div class="font-bold">Excel Workbook (.XLSX)</div>
+              <div class="text-[10px] text-slate-500">Multi-tab structured analysis</div>
+            </div>
+          </a>
+          <a href="{{ url_for('export_csv', session_id=session_id) }}" download="CDR_Records_{{ session_id[:8] }}.csv" onclick="handleExportClick(event, 'Cleaned CSV Records')" class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+            <i data-lucide="file-text" class="w-4 h-4 text-cyber-amber"></i>
+            <div>
+              <div class="font-bold">Cleaned Records (.CSV)</div>
+              <div class="text-[10px] text-slate-500">Normalized raw rows</div>
+            </div>
+          </a>
+          <div class="border-t border-cyber-border my-1"></div>
+          <a href="{{ url_for('export_json', session_id=session_id) }}" download="CDR_Dossier_{{ session_id[:8] }}.json" onclick="handleExportClick(event, 'JSON Intelligence Dossier')" class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+            <i data-lucide="code" class="w-4 h-4 text-cyber-purple"></i>
+            <div>
+              <div class="font-bold">JSON Forensic Dossier</div>
+              <div class="text-[10px] text-slate-500">Machine-readable payload</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <a href="{{ url_for('index') }}" class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        New Analysis
+      </a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- KPI CARDS                                                      -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4" id="kpi-grid">
+    {% set kpis = [
+      ("total_records",    "Total Records",    "database",    "#38bdf8", ""),
+      ("unique_contacts",  "Unique Contacts",  "users",       "#10b981", ""),
+      ("total_duration_hms","Talk Time",       "clock",       "#818cf8", ""),
+      ("night_calls",      "Night Calls",      "moon",        "#f43f5e", "(00:00–05:00)"),
+      ("imei_count",       "IMEI Count",       "smartphone",  "#f59e0b", "Handsets"),
+      ("sms_count",        "SMS Count",        "message-square","#38bdf8","Messages")
+    ] %}
+    {% for key, label, icon, color, sub in kpis %}
+    <div class="kpi-card glass-card p-4 flex flex-col gap-2 hover:border-slate-700 transition-all duration-200">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">{{ label }}</span>
+        <i data-lucide="{{ icon }}" class="w-4 h-4" style="color: {{ color }};"></i>
+      </div>
+      <div class="text-2xl font-bold font-mono" style="color: {{ color }};">
+        {{ (data.kpis[key] if (data.kpis and key in data.kpis) else "—") }}
+      </div>
+      {% if sub %}
+      <div class="text-[10px] text-slate-600">{{ sub }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Call Direction Split ──────────────────────────────────────── -->
+  <div class="grid grid-cols-2 gap-3">
+    <div class="glass-card p-3 flex items-center gap-3">
+      <div class="w-8 h-8 bg-cyber-emerald/20 rounded-lg flex items-center justify-center">
+        <i data-lucide="phone-incoming" class="w-4 h-4 text-cyber-emerald"></i>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500">Incoming</p>
+        <p class="text-lg font-bold font-mono text-cyber-emerald">{{ data.kpis.incoming if (data.kpis and data.kpis.incoming is defined) else 0 }}</p>
+      </div>
+      <div class="ml-auto text-right">
+        <p class="text-xs text-slate-500">of total</p>
+        <p class="text-sm font-mono text-slate-300">
+          {% if data.kpis and data.kpis.total_records and data.kpis.total_records > 0 %}
+          {{ "%.1f"|format(data.kpis.incoming / data.kpis.total_records * 100) }}%
+          {% else %}—{% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="glass-card p-3 flex items-center gap-3">
+      <div class="w-8 h-8 bg-cyber-cyan/20 rounded-lg flex items-center justify-center">
+        <i data-lucide="phone-outgoing" class="w-4 h-4 text-cyber-cyan"></i>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500">Outgoing</p>
+        <p class="text-lg font-bold font-mono text-cyber-cyan">{{ data.kpis.outgoing if (data.kpis and data.kpis.outgoing is defined) else 0 }}</p>
+      </div>
+      <div class="ml-auto text-right">
+        <p class="text-xs text-slate-500">of total</p>
+        <p class="text-sm font-mono text-slate-300">
+          {% if data.kpis and data.kpis.total_records and data.kpis.total_records > 0 %}
+          {{ "%.1f"|format(data.kpis.outgoing / data.kpis.total_records * 100) }}%
+          {% else %}—{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ANOMALY FLAGS BANNER                                           -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  {% set travel_count = data.impossible_travel | length %}
+  {% set swap_flag = data.device_swaps.handset_hopping or data.device_swaps.sim_swapping %}
+  {% if travel_count > 0 or swap_flag %}
+  <div class="glass-card border-cyber-rose/30 bg-cyber-rose/5 p-4">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="beacon beacon-red"></div>
+      <h3 class="text-sm font-bold text-cyber-rose uppercase tracking-wider">⚠ Forensic Anomalies Detected</h3>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% if travel_count > 0 %}
+      <div class="alert-badge-red">
+        <i data-lucide="zap" class="w-3 h-3"></i>
+        {{ travel_count }} Impossible Travel Event{% if travel_count != 1 %}s{% endif %}
+      </div>
+      {% endif %}
+      {% if data.device_swaps.handset_hopping %}
+      <div class="alert-badge-amber">
+        <i data-lucide="smartphone" class="w-3 h-3"></i>
+        Handset Hopping ({{ data.device_swaps.imei_count }} IMEIs)
+      </div>
+      {% endif %}
+      {% if data.device_swaps.sim_swapping %}
+      <div class="alert-badge-amber">
+        <i data-lucide="credit-card" class="w-3 h-3"></i>
+        SIM Swapping ({{ data.device_swaps.imsi_count }} IMSIs)
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CHARTS ROW 1: Hourly + DOW                                    -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- Hourly Heatmap Bar Chart -->
+    <div class="xl:col-span-2 glass-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-cyber-cyan"></i>
+            24-Hour Call Distribution
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">Call frequency by hour of day</p>
+        </div>
+        <div class="flex gap-2 text-[10px] font-mono">
+          <span class="px-2 py-0.5 bg-cyber-purple/20 text-cyber-purple rounded">Night 00-05</span>
+          <span class="px-2 py-0.5 bg-cyber-cyan/20 text-cyber-cyan rounded">Day 06-21</span>
+          <span class="px-2 py-0.5 bg-cyber-amber/20 text-cyber-amber rounded">Evening 22+</span>
+        </div>
+      </div>
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-hourly"></canvas>
+      </div>
+    </div>
+
+    <!-- Day-of-Week Radar -->
+    <div class="glass-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="calendar" class="w-4 h-4 text-cyber-emerald"></i>
+            Day-of-Week Pattern
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">Weekly activity distribution</p>
+        </div>
+      </div>
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-dow"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CHARTS ROW 2: Call Types + Top Contacts                       -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- Call Type Donut -->
+    <div class="glass-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="pie-chart" class="w-4 h-4 text-cyber-purple"></i>
+          Call Type Breakdown
+        </h3>
+      </div>
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-calltypes"></canvas>
+      </div>
+    </div>
+
+    <!-- Top Contacts Bar -->
+    <div class="xl:col-span-2 glass-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="users" class="w-4 h-4 text-cyber-amber"></i>
+          Top 10 Contacts by Call Frequency
+        </h3>
+      </div>
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-contacts"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- LINK ANALYSIS (Vis.js Network)                                 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="glass-card p-5 scroll-mt-20" id="section-link-analysis">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="git-fork" class="w-4 h-4 text-cyber-cyan"></i>
+          Communication Network Graph — Link Analysis
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">Interactive • Click nodes to inspect • Scroll to zoom</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="resetGraph()" class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
+          <i data-lucide="refresh-cw" class="w-3 h-3"></i>Reset
+        </button>
+        <button onclick="fitGraph()" class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
+          <i data-lucide="maximize-2" class="w-3 h-3"></i>Fit
+        </button>
+        <button onclick="togglePhysics()" class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5" id="physics-btn">
+          <i data-lucide="zap" class="w-3 h-3"></i>Physics
+        </button>
+      </div>
+    </div>
+
+    <!-- Graph Legend -->
+    <div class="flex flex-wrap gap-3 mb-3 text-[10px] font-mono">
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block" style="background:#38bdf8"></span>Target Number</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block" style="background:#f43f5e"></span>High-frequency (20+ calls)</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block" style="background:#f59e0b"></span>Medium (10–19)</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block" style="background:#10b981"></span>Low (5–9)</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block" style="background:#64748b"></span>Minimal</span>
+    </div>
+
+    <!-- Network container -->
+    <div id="network-graph" class="vis-network-container w-full rounded-xl border border-cyber-border" style="height: 500px;"></div>
+
+    <!-- Node Inspector Popup -->
+    <div id="node-inspector" class="hidden mt-3 p-4 bg-cyber-bg border border-cyber-cyan/30 rounded-xl">
+      <div class="flex items-center justify-between mb-3">
+        <h4 class="text-sm font-bold text-cyber-cyan flex items-center gap-2">
+          <i data-lucide="user-search" class="w-4 h-4"></i>
+          Contact Inspector
+        </h4>
+        <button onclick="document.getElementById('node-inspector').classList.add('hidden')" class="text-slate-500 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="node-inspector-content" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- GEO-SPATIAL MAP (Leaflet)                                      -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="glass-card p-5 scroll-mt-20" id="section-geo-tracking">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="map-pin" class="w-4 h-4 text-cyber-emerald"></i>
+          Geo-Spatial Tower Tracking
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">Tower trajectory • Chronological path • Heatmap overlay</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="toggleHeatmap()" id="heatmap-btn" class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
+          <i data-lucide="layers" class="w-3 h-3"></i>Heatmap
+        </button>
+        <button onclick="toggleClusters()" id="cluster-btn" class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
+          <i data-lucide="grid-3x3" class="w-3 h-3"></i>Clusters
+        </button>
+        <button onclick="togglePath()" id="path-btn" class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 text-cyber-cyan border-cyber-cyan/30">
+          <i data-lucide="route" class="w-3 h-3"></i>Path
+        </button>
+      </div>
+    </div>
+
+    <!-- Map Legend -->
+    <div class="flex flex-wrap gap-3 mb-3 text-[10px] font-mono">
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-sky-400"></span>Outgoing</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-emerald-400"></span>Incoming</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-amber-400"></span>SMS</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-violet-400"></span>Night Call</span>
+    </div>
+
+    <div id="map-container" class="w-full rounded-xl overflow-hidden border border-cyber-border" style="height: 480px;">
+      <div id="cdr-map" style="width:100%;height:100%;"></div>
+    </div>
+
+    <!-- No geo data notice -->
+    <div id="no-geo-notice" class="hidden mt-3 p-3 bg-cyber-amber/10 border border-cyber-amber/30 rounded-lg text-xs text-cyber-amber flex items-center gap-2">
+      <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+      No geo-coordinate data found in this CDR file. Map requires lat/lon or tower coordinate columns.
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- IMPOSSIBLE TRAVEL TABLE                                        -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  {% if data.impossible_travel %}
+  <div class="glass-card p-5">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="beacon beacon-red"></div>
+      <h3 class="text-sm font-semibold text-cyber-rose">
+        <i data-lucide="zap" class="w-4 h-4 inline mr-1"></i>
+        Impossible Travel Anomalies ({{ data.impossible_travel | length }} events)
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs font-mono">
+        <thead>
+          <tr class="border-b border-cyber-border text-left">
+            <th class="pb-2 text-slate-500 pr-4">From</th>
+            <th class="pb-2 text-slate-500 pr-4">To</th>
+            <th class="pb-2 text-slate-500 pr-4">Distance</th>
+            <th class="pb-2 text-slate-500 pr-4">Time Δ</th>
+            <th class="pb-2 text-slate-500 pr-4">Speed</th>
+            <th class="pb-2 text-slate-500">Towers</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-cyber-border/50">
+          {% for event in data.impossible_travel[:20] %}
+          <tr class="hover:bg-cyber-rose/5 transition-colors">
+            <td class="py-2 pr-4 text-slate-300">{{ event.from_ts[:16] }}</td>
+            <td class="py-2 pr-4 text-slate-300">{{ event.to_ts[:16] }}</td>
+            <td class="py-2 pr-4 text-cyber-amber">{{ event.distance_km }} km</td>
+            <td class="py-2 pr-4 text-slate-400">{{ event.time_diff_min }} min</td>
+            <td class="py-2 pr-4">
+              <span class="px-2 py-0.5 bg-cyber-rose/20 text-cyber-rose rounded text-[10px]">
+                {{ event.speed_kmh | int }} km/h
+              </span>
+            </td>
+            <td class="py-2 text-slate-500">{{ event.from_cell }} → {{ event.to_cell }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- DEVICE SWAP PANEL                                              -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  {% if data.device_swaps.handset_hopping or data.device_swaps.sim_swapping %}
+  <div class="glass-card p-5 border-cyber-amber/30 bg-cyber-amber/5">
+    <h3 class="text-sm font-semibold text-cyber-amber mb-4 flex items-center gap-2">
+      <i data-lucide="smartphone" class="w-4 h-4"></i>
+      Device & SIM Intelligence
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <!-- IMEI Timeline -->
+      {% if data.device_swaps.imei_timeline %}
+      <div>
+        <h4 class="text-xs font-mono text-slate-400 uppercase mb-2">IMEI / Handset Timeline ({{ data.device_swaps.imei_count }} devices)</h4>
+        <div class="space-y-2">
+          {% for item in data.device_swaps.imei_timeline %}
+          <div class="bg-cyber-surface rounded-lg p-3 border border-cyber-border">
+            <p class="text-xs font-mono text-cyber-amber mb-1">{{ item.imei }}</p>
+            <p class="text-[10px] text-slate-500">First: {{ item.first_seen[:16] if item.first_seen else "—" }}</p>
+            <p class="text-[10px] text-slate-500">Last:  {{ item.last_seen[:16] if item.last_seen else "—" }}</p>
+            <p class="text-[10px] text-slate-400 mt-1">{{ item.call_count }} calls</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <!-- IMSI Timeline -->
+      {% if data.device_swaps.imsi_timeline %}
+      <div>
+        <h4 class="text-xs font-mono text-slate-400 uppercase mb-2">IMSI / SIM Timeline ({{ data.device_swaps.imsi_count }} SIMs)</h4>
+        <div class="space-y-2">
+          {% for item in data.device_swaps.imsi_timeline %}
+          <div class="bg-cyber-surface rounded-lg p-3 border border-cyber-border">
+            <p class="text-xs font-mono text-cyber-amber mb-1">{{ item.imsi }}</p>
+            <p class="text-[10px] text-slate-500">First: {{ item.first_seen[:16] if item.first_seen else "—" }}</p>
+            <p class="text-[10px] text-slate-500">Last:  {{ item.last_seen[:16] if item.last_seen else "—" }}</p>
+            <p class="text-[10px] text-slate-400 mt-1">{{ item.call_count }} calls</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- BURST EVENTS                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  {% if data.bursts %}
+  <div class="glass-card p-5">
+    <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+      <i data-lucide="radio" class="w-4 h-4 text-cyber-rose"></i>
+      Call Burst Events ({{ data.bursts | length }} detected)
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for burst in data.bursts[:9] %}
+      <div class="bg-cyber-surface border border-cyber-border rounded-lg p-3 border-l-2 border-l-cyber-rose">
+        <p class="text-xs font-mono text-cyber-rose font-bold">{{ burst.count }} calls / {{ burst.window_minutes }}min</p>
+        <p class="text-[10px] text-slate-500 mt-1">From: {{ burst.start[:16] }}</p>
+        <p class="text-[10px] text-slate-500">To:   {{ burst.end[:16] }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CDR DATA GRID (DataTables)                                     -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="glass-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+        <i data-lucide="table" class="w-4 h-4 text-cyber-cyan"></i>
+        Forensic CDR Log
+        <span class="px-2 py-0.5 bg-cyber-cyan/20 text-cyber-cyan text-[10px] font-mono rounded">{{ data.kpis.total_records }} total</span>
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table id="cdr-table" class="w-full cdr-datatable" style="width:100%">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Caller</th>
+            <th>Receiver</th>
+            <th>Type</th>
+            <th>Duration (s)</th>
+            <th>Cell ID</th>
+            <th>IMEI</th>
+          </tr>
+        </thead>
+        <tbody id="cdr-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const SESSION_ID = "{{ session_id }}";
+
+// ── Chart.js Instances ────────────────────────────────────────────────────
+let hourlyChart, dowChart, callTypeChart, contactChart;
+let networkGraph;
+let leafletMap;
+let heatLayer, markerCluster, pathLayer;
+let heatmapOn = false, clustersOn = false, pathOn = true;
+let physicsEnabled = true;
+
+// ── Export Menu Toggle ───────────────────────────────────────────────────
+function toggleExportMenu() {
+  const menu = document.getElementById('export-menu');
+  if (menu) menu.classList.toggle('hidden');
+}
+function closeExportMenu() {
+  const menu = document.getElementById('export-menu');
+  if (menu) menu.classList.add('hidden');
+}
+function handleExportClick(event, label) {
+  closeExportMenu();
+  showExportToast(`Downloading ${label}...`);
+}
+function showExportToast(msg) {
+  let toast = document.getElementById('export-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'export-toast';
+    toast.className = 'fixed bottom-6 right-6 z-50 px-4 py-3 bg-slate-900/95 border border-cyber-cyan/50 text-white rounded-xl shadow-2xl flex items-center gap-3 font-mono text-xs backdrop-blur transition-all duration-300 transform translate-y-10 opacity-0';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-cyber-emerald animate-ping"></span><span>${msg}</span>`;
+  toast.classList.remove('translate-y-10', 'opacity-0');
+  setTimeout(() => {
+    toast.classList.add('translate-y-10', 'opacity-0');
+  }, 3500);
+}
+window.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('export-dropdown-wrapper');
+  const menu = document.getElementById('export-menu');
+  if (wrapper && menu && !wrapper.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+
+// ── Color helpers ─────────────────────────────────────────────────────────
+function hourlyColor(hour) {
+  if (hour >= 0 && hour <= 4) return 'rgba(129, 140, 248, 0.7)';
+  if (hour >= 22) return 'rgba(245, 158, 11, 0.7)';
+  return 'rgba(56, 189, 248, 0.7)';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LOAD ALL DATA
+// ══════════════════════════════════════════════════════════════════════════
+async function loadAll() {
+  await Promise.all([
+    loadHourly(),
+    loadDow(),
+    loadCallTypes(),
+    loadContacts(),
+    loadGraph(),
+    loadGeo(),
+    loadRecords(),
+  ]);
+}
+
+// ── Hourly Chart ──────────────────────────────────────────────────────────
+async function loadHourly() {
+  const res = await fetch(`/api/hourly/${SESSION_ID}`);
+  const data = await res.json();
+  const labels = data.map(d => `${String(d.hour).padStart(2,'0')}:00`);
+  const counts = data.map(d => d.count);
+  const colors = data.map(d => hourlyColor(d.hour));
+
+  const ctx = document.getElementById('chart-hourly').getContext('2d');
+  hourlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Calls',
+        data: counts,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c.replace('0.7)', '1)')),
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => `Hour: ${ctx[0].label}`,
+            label: ctx => ` Calls: ${ctx.raw}`,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1e293b' }, ticks: { maxRotation: 0, font: { size: 9 } } },
+        y: { grid: { color: '#1e293b' }, beginAtZero: true, ticks: { precision: 0 } },
+      }
+    }
+  });
+}
+
+// ── DOW Radar ─────────────────────────────────────────────────────────────
+async function loadDow() {
+  const res = await fetch(`/api/dow/${SESSION_ID}`);
+  const data = await res.json();
+  const labels = data.map(d => d.day.substring(0, 3));
+  const counts = data.map(d => d.count);
+
+  const ctx = document.getElementById('chart-dow').getContext('2d');
+  dowChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Calls',
+        data: counts,
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        borderColor: '#10b981',
+        borderWidth: 2,
+        pointBackgroundColor: '#10b981',
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          grid: { color: '#1e293b' },
+          angleLines: { color: '#1e293b' },
+          ticks: { color: '#64748b', backdropColor: 'transparent', font: { size: 9 } },
+          pointLabels: { color: '#94a3b8', font: { size: 10 } },
+        }
+      }
+    }
+  });
+}
+
+// ── Call Types Donut ─────────────────────────────────────────────────────
+async function loadCallTypes() {
+  const res = await fetch(`/api/calltypes/${SESSION_ID}`);
+  const data = await res.json();
+  const colorMap = {
+    OUTGOING: '#38bdf8', INCOMING: '#10b981',
+    SMS: '#f59e0b', ROAMING: '#818cf8', UNKNOWN: '#64748b'
+  };
+  const ctx = document.getElementById('chart-calltypes').getContext('2d');
+  callTypeChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.map(d => d.type),
+      datasets: [{
+        data: data.map(d => d.count),
+        backgroundColor: data.map(d => colorMap[d.type] || '#64748b'),
+        borderColor: '#0f172a',
+        borderWidth: 2,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } }
+      },
+      cutout: '60%',
+    }
+  });
+}
+
+// ── Top Contacts Bar ─────────────────────────────────────────────────────
+async function loadContacts() {
+  const res = await fetch(`/api/top-contacts/${SESSION_ID}`);
+  const data = await res.json();
+  const top10 = data.slice(0, 10);
+
+  const ctx = document.getElementById('chart-contacts').getContext('2d');
+  contactChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top10.map(d => d.contact),
+      datasets: [{
+        label: 'Call Count',
+        data: top10.map(d => d.call_count),
+        backgroundColor: 'rgba(245, 158, 11, 0.6)',
+        borderColor: '#f59e0b',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1e293b' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 9, family: 'JetBrains Mono' } } },
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// VIS.JS NETWORK GRAPH
+// ══════════════════════════════════════════════════════════════════════════
+async function loadGraph() {
+  const res = await fetch(`/api/graph/${SESSION_ID}`);
+  const graphData = await res.json();
+
+  const container = document.getElementById('network-graph');
+  const nodes = new vis.DataSet(graphData.nodes);
+  const edges = new vis.DataSet(graphData.edges);
+
+  const options = {
+    physics: {
+      enabled: true,
+      stabilization: { iterations: 100 },
+      barnesHut: {
+        gravitationalConstant: -3000,
+        centralGravity: 0.3,
+        springLength: 120,
+        springConstant: 0.04,
+      }
+    },
+    interaction: {
+      hover: true,
+      navigationButtons: false,
+      keyboard: true,
+      tooltipDelay: 100,
+      zoomView: true,
+    },
+    nodes: {
+      shape: 'dot',
+      borderWidth: 2,
+      shadow: { enabled: true, color: 'rgba(0,0,0,0.5)', x: 3, y: 3, size: 8 },
+    },
+    edges: {
+      smooth: { type: 'curvedCW', roundness: 0.1 },
+      shadow: false,
+    },
+    layout: { improvedLayout: graphData.nodes.length < 100 },
+  };
+
+  networkGraph = new vis.Network(container, { nodes, edges }, options);
+
+  // Node click → inspector
+  networkGraph.on('click', function(params) {
+    if (params.nodes.length > 0) {
+      const nodeId = params.nodes[0];
+      const node = graphData.nodes.find(n => n.id === nodeId);
+      if (node) showNodeInspector(node);
+    }
+  });
+}
+
+function showNodeInspector(node) {
+  const inspector = document.getElementById('node-inspector');
+  const content = document.getElementById('node-inspector-content');
+  inspector.classList.remove('hidden');
+  content.innerHTML = `
+    <div class="inspector-stat">
+      <p class="text-[10px] text-slate-500 font-mono uppercase mb-1">Number</p>
+      <p class="text-sm font-mono text-white font-bold">${node.id}</p>
+    </div>
+    <div class="inspector-stat">
+      <p class="text-[10px] text-slate-500 font-mono uppercase mb-1">Call Degree</p>
+      <p class="text-sm font-mono text-cyber-cyan font-bold">${node.degree}</p>
+    </div>
+    <div class="inspector-stat">
+      <p class="text-[10px] text-slate-500 font-mono uppercase mb-1">Centrality</p>
+      <p class="text-sm font-mono text-cyber-emerald font-bold">${node.centrality}</p>
+    </div>
+    <div class="inspector-stat">
+      <p class="text-[10px] text-slate-500 font-mono uppercase mb-1">Role</p>
+      <p class="text-sm font-mono font-bold ${node.is_target ? 'text-cyber-rose' : 'text-slate-300'}">${node.is_target ? '🎯 TARGET' : 'Contact'}</p>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+function resetGraph() { if (networkGraph) networkGraph.fit(); }
+function fitGraph() { if (networkGraph) networkGraph.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } }); }
+function togglePhysics() {
+  if (!networkGraph) return;
+  physicsEnabled = !physicsEnabled;
+  networkGraph.setOptions({ physics: { enabled: physicsEnabled } });
+  document.getElementById('physics-btn').classList.toggle('text-cyber-cyan', physicsEnabled);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LEAFLET MAP
+// ══════════════════════════════════════════════════════════════════════════
+async function loadGeo() {
+  const res = await fetch(`/api/geo/${SESSION_ID}`);
+  const geo = await res.json();
+
+  if (!geo.has_geo || geo.markers.length === 0) {
+    document.getElementById('no-geo-notice').classList.remove('hidden');
+    document.getElementById('map-container').style.display = 'none';
+    return;
+  }
+
+  // Initialize Leaflet map
+  leafletMap = L.map('cdr-map', {
+    center: geo.center,
+    zoom: 10,
+    zoomControl: true,
+  });
+
+  // Dark tile layer (CartoDB Dark Matter)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CartoDB',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(leafletMap);
+
+  // ── Marker Cluster ──────────────────────────────────────────────
+  markerCluster = L.markerClusterGroup({ maxClusterRadius: 50, showCoverageOnHover: false });
+
+  geo.markers.forEach((m, idx) => {
+    const circleMarker = L.circleMarker([m.lat, m.lon], {
+      radius: 7,
+      fillColor: m.color,
+      color: '#0b0f19',
+      weight: 1.5,
+      fillOpacity: 0.85,
+    });
+
+    const label = m.timestamp
+      ? m.timestamp.substring(0, 16).replace('T', ' ')
+      : 'Unknown time';
+    circleMarker.bindPopup(`
+      <div style="font-family:monospace;font-size:11px;min-width:200px;">
+        <div style="color:#38bdf8;font-weight:bold;margin-bottom:6px;">#${idx + 1} — ${label}</div>
+        <div>📞 ${m.caller} → ${m.receiver}</div>
+        <div>🗼 Tower: ${m.cell_id || 'N/A'}</div>
+        <div>⬆ Type: ${m.call_type}</div>
+        <div>⏱ Duration: ${m.duration}s</div>
+        <div>📍 ${m.lat.toFixed(5)}, ${m.lon.toFixed(5)}</div>
+      </div>
+    `, { className: 'dark-popup' });
+
+    markerCluster.addLayer(circleMarker);
+  });
+
+  leafletMap.addLayer(markerCluster);
+
+  // ── Trajectory Path ─────────────────────────────────────────────
+  if (geo.path.length >= 2) {
+    pathLayer = L.polyline(geo.path, {
+      color: '#38bdf8',
+      weight: 2,
+      opacity: 0.6,
+      dashArray: '6, 4',
+    });
+    leafletMap.addLayer(pathLayer);
+  }
+
+  // ── Heatmap Layer ───────────────────────────────────────────────
+  if (geo.heatmap.length > 0) {
+    heatLayer = L.heatLayer(geo.heatmap, {
+      radius: 30, blur: 20, maxZoom: 15,
+      gradient: { 0.2: '#10b981', 0.5: '#f59e0b', 0.8: '#f43f5e', 1.0: '#ffffff' }
+    });
+    // Not added by default; toggled by user
+  }
+}
+
+// Map toggle functions
+function toggleHeatmap() {
+  if (!leafletMap || !heatLayer) return;
+  heatmapOn = !heatmapOn;
+  if (heatmapOn) leafletMap.addLayer(heatLayer);
+  else leafletMap.removeLayer(heatLayer);
+  document.getElementById('heatmap-btn').classList.toggle('text-cyber-cyan', heatmapOn);
+}
+
+function toggleClusters() {
+  if (!leafletMap || !markerCluster) return;
+  clustersOn = !clustersOn;
+  if (clustersOn) {
+    leafletMap.removeLayer(markerCluster);
+    // Show individual dots instead
+    markerCluster.getLayers().forEach(l => leafletMap.addLayer(l));
+  } else {
+    markerCluster.getLayers().forEach(l => leafletMap.removeLayer(l));
+    leafletMap.addLayer(markerCluster);
+  }
+  document.getElementById('cluster-btn').classList.toggle('text-cyber-cyan', clustersOn);
+}
+
+function togglePath() {
+  if (!leafletMap || !pathLayer) return;
+  pathOn = !pathOn;
+  if (pathOn) leafletMap.addLayer(pathLayer);
+  else leafletMap.removeLayer(pathLayer);
+  document.getElementById('path-btn').classList.toggle('text-cyber-cyan', pathOn);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CDR DATATABLE
+// ══════════════════════════════════════════════════════════════════════════
+async function loadRecords() {
+  const res = await fetch(`/api/records/${SESSION_ID}`);
+  const records = await res.json();
+
+  const typeColors = {
+    OUTGOING: 'text-cyber-cyan', INCOMING: 'text-cyber-emerald',
+    SMS: 'text-cyber-amber', ROAMING: 'text-cyber-purple'
+  };
+
+  const tableData = records.map(r => [
+    r.timestamp ? r.timestamp.substring(0, 16).replace('T', ' ') : '—',
+    `<span class="font-mono text-xs">${r.caller}</span>`,
+    `<span class="font-mono text-xs">${r.receiver}</span>`,
+    `<span class="text-xs font-mono ${typeColors[r.call_type] || 'text-slate-400'}">${r.call_type}</span>`,
+    r.duration,
+    r.cell_id || '—',
+    r.imei || '—',
+  ]);
+
+  $('#cdr-table').DataTable({
+    data: tableData,
+    pageLength: 25,
+    lengthMenu: [10, 25, 50, 100],
+    dom: '<"flex flex-wrap items-center justify-between gap-2 mb-4"Bf>t<"flex flex-wrap items-center justify-between gap-2 mt-4"lip>',
+    buttons: ['copy', 'csv', 'excel'],
+    responsive: true,
+    language: {
+      search: '',
+      searchPlaceholder: 'Search records...',
+      lengthMenu: 'Show _MENU_ records',
+      info: 'Showing _START_ to _END_ of _TOTAL_ records',
+    }
+  });
+}
+
+// Anomaly alert counter
+async function loadAnomalyCount() {
+  const res = await fetch(`/api/anomalies/${SESSION_ID}`);
+  const data = await res.json();
+  const count = data.impossible_travel.length + (data.device_swaps.handset_hopping ? 1 : 0) + (data.device_swaps.sim_swapping ? 1 : 0);
+  if (count > 0) {
+    const indicator = document.getElementById('alert-indicator');
+    document.getElementById('alert-count').textContent = count;
+    indicator.classList.remove('hidden');
+  }
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  lucide.createIcons();
+  await loadAll();
+  await loadAnomalyCount();
+
+  // If hash is present (e.g. #section-link-analysis or #section-geo-tracking), scroll to it
+  if (window.location.hash) {
+    const target = document.querySelector(window.location.hash);
+    if (target) {
+      setTimeout(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (typeof highlightElement === 'function') highlightElement(target);
+        if (window.location.hash === '#section-link-analysis' && typeof fitGraph === 'function') fitGraph();
+        if (window.location.hash === '#section-geo-tracking' && leafletMap) leafletMap.invalidateSize();
+      }, 500);
+    }
+  }
+});
+</script>
+{% endblock %}

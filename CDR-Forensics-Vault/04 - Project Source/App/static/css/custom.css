@@ -1,0 +1,530 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   CDR Forensic Intelligence Platform — Custom Styles
+   Dark cyber-theme overrides for Vis.js, Leaflet, DataTables, and more.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Google Fonts import fallback ─────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── CSS Custom Properties ────────────────────────────────────────────── */
+:root {
+  --color-bg:       #0b0f19;
+  --color-surface:  #0f172a;
+  --color-card:     #111827;
+  --color-border:   #1e293b;
+  --color-cyan:     #38bdf8;
+  --color-emerald:  #10b981;
+  --color-rose:     #f43f5e;
+  --color-amber:    #f59e0b;
+  --color-purple:   #818cf8;
+  --color-text:     #cbd5e1;
+  --color-muted:    #64748b;
+}
+
+/* ── Base Reset ───────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse at 10% 0%, rgba(56, 189, 248, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 50%);
+  background-attachment: fixed;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* ── Custom Scrollbar (Webkit) ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+/* ── Glassmorphism Card ───────────────────────────────────────────────── */
+.glass-card {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-card:hover {
+  border-color: #334155;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Animated Status Beacons ──────────────────────────────────────────── */
+.beacon {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.beacon::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: beacon-pulse 2s ease-out infinite;
+}
+
+.beacon-green  { background: var(--color-emerald); color: var(--color-emerald); }
+.beacon-red    { background: var(--color-rose);    color: var(--color-rose);    }
+.beacon-blue   { background: var(--color-cyan);    color: var(--color-cyan);    }
+.beacon-amber  { background: var(--color-amber);   color: var(--color-amber);   }
+
+@keyframes beacon-pulse {
+  0%   { opacity: 0.8; transform: scale(0.8); }
+  100% { opacity: 0;   transform: scale(2.0); }
+}
+
+/* ── Alert Badges ─────────────────────────────────────────────────────── */
+.alert-badge-red {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  border-radius: 4px;
+  color: var(--color-rose);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.alert-badge-amber {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 4px;
+  color: var(--color-amber);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+/* ── Sidebar Navigation ───────────────────────────────────────────────── */
+.sidebar-nav {
+  transition: width 0.3s ease;
+}
+
+.nav-item.active {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: var(--color-cyan);
+}
+
+.nav-item.active i { color: var(--color-cyan); }
+
+/* ── Tab Buttons ──────────────────────────────────────────────────────── */
+.tab-btn {
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.tab-btn.active,
+.tab-btn:hover {
+  color: var(--color-cyan);
+  border-bottom-color: var(--color-cyan);
+}
+
+/* ── Upload / Drop Zone ───────────────────────────────────────────────── */
+.drop-zone.drag-over {
+  border-color: var(--color-cyan) !important;
+  background: rgba(56, 189, 248, 0.08) !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+.drop-zone {
+  transition: all 0.25s ease;
+}
+
+/* ── KPI Cards ────────────────────────────────────────────────────────── */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.03) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ── Chart Container ──────────────────────────────────────────────────── */
+.chart-container {
+  position: relative;
+  width: 100%;
+}
+
+/* ── Vis.js Network Canvas ────────────────────────────────────────────── */
+.vis-network-container {
+  background: var(--color-bg) !important;
+  background-image:
+    linear-gradient(rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+  background-size: 30px 30px;
+  position: relative;
+}
+
+.vis-network {
+  background: transparent !important;
+}
+
+div.vis-tooltip {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  color: #cbd5e1 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  max-width: 250px;
+  white-space: normal !important;
+}
+
+/* ── Vis.js Navigation Buttons override ──────────────────────────────── */
+.vis-button {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  color: #94a3b8 !important;
+  border-radius: 4px !important;
+}
+
+/* ── Node Inspector stats ─────────────────────────────────────────────── */
+.inspector-stat {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+/* ── Leaflet Map Overrides ────────────────────────────────────────────── */
+.leaflet-container {
+  background: var(--color-bg) !important;
+  font-family: 'Inter', sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  color: var(--color-text) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--color-surface) !important;
+}
+
+.leaflet-popup-close-button {
+  color: #64748b !important;
+}
+
+/* MarkerCluster dark overrides */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-clip: padding-box;
+}
+
+.marker-cluster-small div {
+  background-color: rgba(56, 189, 248, 0.7) !important;
+}
+
+.marker-cluster-medium div {
+  background-color: rgba(245, 158, 11, 0.7) !important;
+}
+
+.marker-cluster-large div {
+  background-color: rgba(244, 63, 94, 0.7) !important;
+}
+
+.marker-cluster {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+.marker-cluster div {
+  color: white !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+/* Dark popup class for Leaflet popups */
+.leaflet-popup.dark-popup .leaflet-popup-content-wrapper {
+  background: var(--color-bg) !important;
+  border-color: var(--color-cyan) !important;
+  color: #e2e8f0 !important;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.leaflet-popup.dark-popup .leaflet-popup-tip {
+  background: var(--color-bg) !important;
+}
+
+/* Leaflet zoom controls */
+.leaflet-control-zoom a {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  color: #94a3b8 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #1e293b !important;
+  color: white !important;
+}
+
+.leaflet-bar {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ── DataTables Dark Theme ────────────────────────────────────────────── */
+.cdr-datatable {
+  color: var(--color-text) !important;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  width: 100% !important;
+}
+
+table.dataTable thead th {
+  background: var(--color-bg) !important;
+  color: #64748b !important;
+  font-size: 10px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  padding: 10px 12px !important;
+  white-space: nowrap;
+}
+
+table.dataTable thead th:hover {
+  color: white !important;
+}
+
+table.dataTable tbody td {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5) !important;
+  padding: 8px 12px !important;
+  color: #cbd5e1 !important;
+}
+
+table.dataTable tbody tr:hover td {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+table.dataTable tbody tr.odd td {
+  background: rgba(17, 24, 39, 0.3) !important;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  background: var(--color-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  color: white !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  outline: none !important;
+  margin-left: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+  border-color: var(--color-cyan) !important;
+}
+
+.dataTables_wrapper .dataTables_filter label {
+  color: #64748b !important;
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_length select {
+  background: var(--color-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  color: white !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+
+.dataTables_wrapper .dataTables_length label {
+  color: #64748b !important;
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_info {
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  color: #94a3b8 !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  padding: 4px 10px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  color: white !important;
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+  color: var(--color-bg) !important;
+  background: var(--color-cyan) !important;
+  border-color: var(--color-cyan) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+  color: #334155 !important;
+  cursor: default;
+}
+
+/* DataTables Buttons */
+.dt-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.dt-button {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  color: #94a3b8 !important;
+  border-radius: 6px !important;
+  padding: 5px 12px !important;
+  font-size: 11px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease;
+}
+
+.dt-button:hover {
+  background: #1e293b !important;
+  color: white !important;
+  border-color: #334155 !important;
+}
+
+/* ── Gradient Shimmer Animation (Loading States) ──────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.5) 25%,
+    rgba(51, 65, 85, 0.5) 50%,
+    rgba(30, 41, 59, 0.5) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* ── Scan Line Animation ──────────────────────────────────────────────── */
+@keyframes scanline {
+  0%   { top: -10%; }
+  100% { top: 110%; }
+}
+
+.vis-network-container::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.15), transparent);
+  animation: scanline 4s linear infinite;
+  pointer-events: none;
+}
+
+/* ── Glow Effects ─────────────────────────────────────────────────────── */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.2),
+              0 0 40px rgba(56, 189, 248, 0.1);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2),
+              0 0 40px rgba(16, 185, 129, 0.1);
+}
+
+.glow-rose {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.2),
+              0 0 40px rgba(244, 63, 94, 0.1);
+}
+
+/* ── Pulse Ring on Critical Alerts ───────────────────────────────────── */
+@keyframes pulse-ring {
+  0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.5); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);   }
+}
+
+.pulse-alert {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ── Grid Overlay on background ──────────────────────────────────────── */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(30, 41, 59, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 59, 0.2) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Chart.js canvas fix in dark mode ────────────────────────────────── */
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+/* ── Responsive overrides ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .sidebar-nav {
+    width: 4rem !important;
+  }
+
+  .kpi-card .text-2xl {
+    font-size: 1.25rem;
+  }
+}
+
+/* ── Utility overrides ────────────────────────────────────────────────── */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
+
+/* Scrollbar on vis container */
+#network-graph::-webkit-scrollbar,
+#cross-network::-webkit-scrollbar {
+  display: none;
+}

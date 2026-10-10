@@ -1,0 +1,19 @@
+flask==3.0.3
+pandas==2.2.2
+openpyxl==3.1.4
+xlrd==2.0.1
+networkx==3.3
+geopy==2.4.1
+python-dateutil==2.9.0
+werkzeug==3.0.3
+numpy==1.26.4
+
+# ── DEMS: Digital Evidence Management System ─────────────────────────────────
+flask-sqlalchemy==3.1.1
+flask-bcrypt==1.0.1
+cryptography==42.0.8
+sqlalchemy==2.0.30
+requests>=2.31.0
+
+# ── DEMS: Audio Intelligence / Speech-to-Text ────────────────────────────────
+faster-whisper==1.2.1

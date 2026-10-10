@@ -1,0 +1,1129 @@
+{% extends "layout.html" %}
+
+{% block title %}AI Intelligence & Forensic Profiler — T.R.I.A.D.{% endblock %}
+
+{% block content %}
+
+<div class="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- ============================================================ -->
+    <!-- HEADER -->
+    <!-- ============================================================ -->
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs text-muted tracking-wider uppercase font-mono">
+                    Multi-Tier Local LLM & Suspect Profiling
+                </span>
+            </div>
+
+            <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white flex items-center gap-3">
+                AI Forensic Intelligence Workspace
+            </h1>
+
+            <p class="text-sm text-neutral-400 mt-2 max-w-3xl leading-relaxed">
+                Autonomous evidence-grounded reasoning, multi-tier Local LLM inference (Ollama / LM Studio),
+                dynamic threat risk scoring, and structured forensic hypothesis formulation compliant with ISO/IEC 27037.
+            </p>
+        </div>
+
+        <!-- HEADER CONTROLS & EXPORTS -->
+        <div class="flex flex-wrap items-center gap-3">
+
+            <!-- Export Dropdown -->
+            <div class="relative inline-block text-left">
+                <div class="flex items-center gap-2">
+                    <button
+                        id="exportDossierBtn"
+                        type="button"
+                        onclick="toggleExportMenu()"
+                        class="px-3.5 py-2 rounded-lg bg-neutral-900 border border-neutral-700/80 hover:border-neutral-500 text-neutral-300 text-xs font-medium inline-flex items-center gap-2 transition"
+                    >
+                        <i data-lucide="download" class="w-4 h-4 text-neutral-400"></i>
+                        <span>Export Dossier</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-neutral-500"></i>
+                    </button>
+                    
+                    <div id="exportMenu" class="hidden absolute right-0 mt-2 w-56 rounded-xl bg-neutral-950 border border-neutral-800 shadow-2xl z-50 py-1.5 backdrop-blur-xl">
+                        <a href="/api/ai-intelligence/{{ session_id }}/export?format=markdown" download class="flex items-center gap-2.5 px-4 py-2.5 text-xs text-neutral-300 hover:bg-neutral-900 hover:text-white transition">
+                            <i data-lucide="file-text" class="w-4 h-4 text-purple-400"></i>
+                            <span>Download Markdown (.md)</span>
+                        </a>
+                        <a href="/api/ai-intelligence/{{ session_id }}/export?format=json" download class="flex items-center gap-2.5 px-4 py-2.5 text-xs text-neutral-300 hover:bg-neutral-900 hover:text-white transition">
+                            <i data-lucide="file-json" class="w-4 h-4 text-emerald-400"></i>
+                            <span>Download Raw JSON (.json)</span>
+                        </a>
+                        <button type="button" onclick="window.print()" class="w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-xs text-neutral-300 hover:bg-neutral-900 hover:text-white transition">
+                            <i data-lucide="printer" class="w-4 h-4 text-blue-400"></i>
+                            <span>Print Court Memorandum</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Full Assessment Button -->
+            <button
+                id="generateAssessmentBtn"
+                type="button"
+                class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium text-xs tracking-wide shadow-lg shadow-purple-600/30 flex items-center gap-2 transition cursor-pointer"
+            >
+                <i id="generateIcon" data-lucide="sparkles" class="w-4 h-4"></i>
+                <span id="generateBtnText">Generate Full Assessment</span>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- INFERENCE ENGINE SWITCHER & TELEMETRY BANNER -->
+    <!-- ============================================================ -->
+
+    <div class="rounded-xl border border-neutral-800 bg-[#0d0d0d] p-4">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="text-xs text-neutral-400 font-medium uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5 text-purple-400"></i>
+                    Inference Engine:
+                </span>
+
+                <div class="inline-flex rounded-lg bg-neutral-900/90 p-1 border border-neutral-800 text-xs">
+                    <button
+                        type="button"
+                        id="engineBtnAuto"
+                        onclick="setEngineMode('auto')"
+                        class="engine-tab px-3 py-1.5 rounded-md text-white font-medium bg-neutral-800 transition flex items-center gap-1.5"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Auto-Detect
+                    </button>
+                    <button
+                        type="button"
+                        id="engineBtnOllama"
+                        onclick="setEngineMode('ollama')"
+                        class="engine-tab px-3 py-1.5 rounded-md text-neutral-400 hover:text-white transition flex items-center gap-1.5"
+                    >
+                        <span id="ollamaDot" class="w-2 h-2 rounded-full bg-neutral-600"></span>
+                        Local Ollama
+                    </button>
+                    <button
+                        type="button"
+                        id="engineBtnLocal"
+                        onclick="setEngineMode('local_openai')"
+                        class="engine-tab px-3 py-1.5 rounded-md text-neutral-400 hover:text-white transition flex items-center gap-1.5"
+                    >
+                        <span id="localDot" class="w-2 h-2 rounded-full bg-neutral-600"></span>
+                        LM Studio
+                    </button>
+                    <button
+                        type="button"
+                        id="engineBtnCloud"
+                        onclick="setEngineMode('cloud')"
+                        class="engine-tab px-3 py-1.5 rounded-md text-neutral-400 hover:text-white transition flex items-center gap-1.5"
+                    >
+                        <span id="cloudDot" class="w-2 h-2 rounded-full bg-neutral-600"></span>
+                        Cloud LLM
+                    </button>
+                    <button
+                        type="button"
+                        id="engineBtnOffline"
+                        onclick="setEngineMode('offline')"
+                        class="engine-tab px-3 py-1.5 rounded-md text-neutral-400 hover:text-white transition flex items-center gap-1.5"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                        Offline Neural Agent
+                    </button>
+                </div>
+
+                <!-- Model Selector if available -->
+                <div id="modelSelectContainer" class="hidden items-center gap-2">
+                    <span class="text-xs text-neutral-500 font-mono">Model:</span>
+                    <select id="engineModelSelect" class="bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs rounded-lg px-2.5 py-1 outline-none font-mono">
+                        <option value="">Default Model</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Real-time Diagnostics Pill -->
+            <div class="flex items-center gap-3">
+                <button
+                    type="button"
+                    onclick="checkProviders(true)"
+                    class="px-2.5 py-1 text-[11px] rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/60 text-neutral-300 transition flex items-center gap-1.5"
+                >
+                    <i id="pingIcon" data-lucide="refresh-cw" class="w-3 h-3"></i>
+                    <span>Probe Hardware</span>
+                </button>
+                <div id="engineStatusBadge" class="text-xs font-mono text-neutral-400 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Ready</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- THREAT RISK SCORECARD & TELEMETRY -->
+    <!-- ============================================================ -->
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
+        <!-- THREAT SCORE GAUGE -->
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-5 flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-purple-600/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-neutral-400 uppercase tracking-wider font-medium">Forensic Threat Rating</span>
+                    <span id="threatLevelBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-neutral-800 text-neutral-300">
+                        PENDING
+                    </span>
+                </div>
+                <div class="mt-4 flex items-baseline gap-3">
+                    <div id="threatScoreNumber" class="text-4xl font-extrabold text-white font-mono tracking-tight">—</div>
+                    <div class="text-xs text-neutral-500 font-mono">/ 100 PTS</div>
+                </div>
+                <p id="threatScoreDesc" class="text-xs text-neutral-400 mt-2 leading-relaxed">
+                    Awaiting assessment execution to calculate multi-factor telemetry risk.
+                </p>
+            </div>
+            <div class="w-full bg-neutral-900 rounded-full h-2 mt-4 overflow-hidden border border-neutral-800">
+                <div id="threatScoreBar" class="h-full bg-purple-500 rounded-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- RISK SUB-FACTOR 1: VELOCITY & TELEMETRY -->
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-neutral-400 font-medium flex items-center gap-1.5">
+                        <i data-lucide="plane-takeoff" class="w-3.5 h-3.5 text-blue-400"></i>
+                        Velocity & RF Hops
+                    </span>
+                    <span id="scoreVelText" class="font-mono text-neutral-300 font-semibold">— / 25</span>
+                </div>
+                <p class="text-xs text-neutral-500 mt-2">
+                    Flags supersonic tower hops (&gt;900 km/h) & cross-sector displacement.
+                </p>
+            </div>
+            <div class="w-full bg-neutral-900 rounded-full h-1.5 mt-4 overflow-hidden">
+                <div id="scoreVelBar" class="h-full bg-blue-500 rounded-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- RISK SUB-FACTOR 2: HARDWARE / BURNER EVASION -->
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-neutral-400 font-medium flex items-center gap-1.5">
+                        <i data-lucide="smartphone-charging" class="w-3.5 h-3.5 text-rose-400"></i>
+                        Hardware & Burner Evasion
+                    </span>
+                    <span id="scoreHwText" class="font-mono text-neutral-300 font-semibold">— / 25</span>
+                </div>
+                <p class="text-xs text-neutral-500 mt-2">
+                    Identifies Handset Hopping (multiple IMEIs) & SIM Swapping (multiple IMSIs).
+                </p>
+            </div>
+            <div class="w-full bg-neutral-900 rounded-full h-1.5 mt-4 overflow-hidden">
+                <div id="scoreHwBar" class="h-full bg-rose-500 rounded-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- RISK SUB-FACTOR 3: TEMPORAL & NETWORK SCALE -->
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-neutral-400 font-medium flex items-center gap-1.5">
+                        <i data-lucide="moon" class="w-3.5 h-3.5 text-amber-400"></i>
+                        Nocturnal & Network Bursts
+                    </span>
+                    <span id="scoreTempText" class="font-mono text-neutral-300 font-semibold">— / 25</span>
+                </div>
+                <p class="text-xs text-neutral-500 mt-2">
+                    Nocturnal call ratio (00:00–05:00) & high-frequency communication bursts.
+                </p>
+            </div>
+            <div class="w-full bg-neutral-900 rounded-full h-1.5 mt-4 overflow-hidden">
+                <div id="scoreTempBar" class="h-full bg-amber-500 rounded-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- NAVIGATION TABS -->
+    <!-- ============================================================ -->
+
+    <div class="border-b border-neutral-800 flex items-center gap-6 text-sm">
+        <button
+            type="button"
+            onclick="switchTab('assessment')"
+            id="tabBtnAssessment"
+            class="pb-3 border-b-2 border-purple-500 text-white font-medium flex items-center gap-2 transition"
+        >
+            <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+            <span>Executive Assessment</span>
+        </button>
+
+        <button
+            type="button"
+            onclick="switchTab('profile')"
+            id="tabBtnProfile"
+            class="pb-3 border-b-2 border-transparent text-neutral-400 hover:text-white font-medium flex items-center gap-2 transition"
+        >
+            <i data-lucide="user-check" class="w-4 h-4 text-indigo-400"></i>
+            <span>Suspect Profile & OpSec</span>
+        </button>
+
+        <button
+            type="button"
+            onclick="switchTab('hypotheses')"
+            id="tabBtnHypotheses"
+            class="pb-3 border-b-2 border-transparent text-neutral-400 hover:text-white font-medium flex items-center gap-2 transition"
+        >
+            <i data-lucide="git-pull-request" class="w-4 h-4 text-emerald-400"></i>
+            <span>Hypotheses Matrix</span>
+            <span id="hypothesesBadge" class="hidden text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono">0</span>
+        </button>
+
+        <button
+            type="button"
+            onclick="switchTab('facts')"
+            id="tabBtnFacts"
+            class="pb-3 border-b-2 border-transparent text-neutral-400 hover:text-white font-medium flex items-center gap-2 transition"
+        >
+            <i data-lucide="shield-check" class="w-4 h-4 text-blue-400"></i>
+            <span>Verified Facts & Citations</span>
+        </button>
+
+        <button
+            type="button"
+            onclick="switchTab('chat')"
+            id="tabBtnChat"
+            class="pb-3 border-b-2 border-transparent text-neutral-400 hover:text-white font-medium flex items-center gap-2 transition"
+        >
+            <i data-lucide="message-square-code" class="w-4 h-4 text-rose-400"></i>
+            <span>Analyst Chat Studio</span>
+        </button>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: EXECUTIVE ASSESSMENT -->
+    <!-- ============================================================ -->
+
+    <div id="tabContentAssessment" class="space-y-6">
+
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-neutral-800/80 pb-4">
+                <div class="flex items-center gap-3">
+                    <span class="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Forensic Intelligence Assessment Narrative</h2>
+                        <p class="text-xs text-neutral-400 mt-0.5">Automated factual synthesis derived from verified CDR evidence</p>
+                    </div>
+                </div>
+                <div id="assessmentProviderLabel" class="text-xs font-mono text-neutral-500">
+                    Engine: Deterministic Interpretation
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="assessmentLoading" class="hidden py-12 text-center space-y-3">
+                <div class="inline-block animate-spin text-purple-400">
+                    <i data-lucide="loader-2" class="w-8 h-8"></i>
+                </div>
+                <p class="text-sm text-neutral-400">Synthesizing evidence packet with selected inference engine...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="assessmentEmpty" class="py-12 text-center space-y-3">
+                <div class="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 mx-auto flex items-center justify-center text-neutral-500">
+                    <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-neutral-300">No Assessment Generated Yet</h3>
+                <p class="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+                    Click <strong>Generate Full Assessment</strong> to trigger multi-factor evidence synthesis,
+                    suspect profiling, and forensic hypothesis formulation.
+                </p>
+            </div>
+
+            <!-- Assessment Content -->
+            <div id="assessmentContent" class="hidden space-y-4">
+                <div id="assessmentText" class="text-sm text-neutral-200 leading-relaxed font-sans whitespace-pre-wrap bg-neutral-950/70 p-5 rounded-xl border border-neutral-800/80 font-normal"></div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: SUSPECT PROFILE & OPSEC -->
+    <!-- ============================================================ -->
+
+    <div id="tabContentProfile" class="hidden space-y-6">
+
+        <!-- Suspect Hero Card -->
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-6 space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-neutral-800/80 pb-5">
+                <div>
+                    <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Target Identifier</span>
+                    <h2 class="text-2xl font-bold text-white font-mono mt-0.5" id="profileTargetText">{{ target or "TARGET" }}</h2>
+                </div>
+                <div>
+                    <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block">Classified Behavioral Archetype</span>
+                    <span id="profileArchetypeText" class="inline-block mt-1 text-sm font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/30 px-3 py-1 rounded-md">
+                        Standard Point-to-Point Operative
+                    </span>
+                </div>
+            </div>
+
+            <div class="bg-neutral-950 p-4 rounded-xl border border-neutral-800/80 text-xs text-neutral-300 leading-relaxed" id="profileArchetypeDesc">
+                Profile telemetry will populate following evidence synthesis.
+            </div>
+
+            <!-- Operational Telemetry Grid -->
+            <div>
+                <h3 class="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Operational Footprint Telemetry</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div class="bg-neutral-900/60 p-3 rounded-lg border border-neutral-800">
+                        <div class="text-[10px] text-neutral-500 uppercase font-mono">Total Records</div>
+                        <div id="profRecords" class="text-base font-bold text-white font-mono mt-1">—</div>
+                    </div>
+                    <div class="bg-neutral-900/60 p-3 rounded-lg border border-neutral-800">
+                        <div class="text-[10px] text-neutral-500 uppercase font-mono">Unique Contacts</div>
+                        <div id="profContacts" class="text-base font-bold text-white font-mono mt-1">—</div>
+                    </div>
+                    <div class="bg-neutral-900/60 p-3 rounded-lg border border-neutral-800">
+                        <div class="text-[10px] text-neutral-500 uppercase font-mono">Talk-Time</div>
+                        <div id="profTalkTime" class="text-base font-bold text-white font-mono mt-1">—</div>
+                    </div>
+                    <div class="bg-neutral-900/60 p-3 rounded-lg border border-neutral-800">
+                        <div class="text-[10px] text-neutral-500 uppercase font-mono">Total Trajectory</div>
+                        <div id="profDistance" class="text-base font-bold text-white font-mono mt-1">— km</div>
+                    </div>
+                    <div class="bg-neutral-900/60 p-3 rounded-lg border border-neutral-800">
+                        <div class="text-[10px] text-neutral-500 uppercase font-mono">Night Activity</div>
+                        <div id="profNightPct" class="text-base font-bold text-amber-400 font-mono mt-1">— %</div>
+                    </div>
+                    <div class="bg-neutral-900/60 p-3 rounded-lg border border-neutral-800">
+                        <div class="text-[10px] text-neutral-500 uppercase font-mono">Call Direction</div>
+                        <div id="profDirection" class="text-base font-bold text-neutral-300 font-mono mt-1">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detected OpSec Countermeasures -->
+            <div>
+                <h3 class="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-rose-400"></i>
+                    Detected Counter-Surveillance & Evasion Indicators
+                </h3>
+                <div id="opsecTacticsContainer" class="space-y-2.5">
+                    <div class="text-xs text-neutral-500 py-3 text-center">No countermeasures logged yet.</div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: HYPOTHESES MATRIX -->
+    <!-- ============================================================ -->
+
+    <div id="tabContentHypotheses" class="hidden space-y-6">
+
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-neutral-800/80 pb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <i data-lucide="git-pull-request" class="w-5 h-5 text-emerald-400"></i>
+                        Forensic Hypotheses & Legal Action Matrix
+                    </h2>
+                    <p class="text-xs text-neutral-400 mt-0.5">
+                        Testable investigative theories grounded in mathematical evidence with competing explanations.
+                    </p>
+                </div>
+            </div>
+
+            <div id="hypothesesCardsContainer" class="space-y-4">
+                <div class="text-xs text-neutral-500 py-12 text-center">
+                    Click <strong>Generate Full Assessment</strong> to formulate hypotheses.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: VERIFIED FACTS & CITATIONS -->
+    <!-- ============================================================ -->
+
+    <div id="tabContentFacts" class="hidden space-y-6">
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Verified Facts -->
+            <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-6 space-y-4">
+                <div class="flex items-center gap-3 border-b border-neutral-800/80 pb-3">
+                    <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <i data-lucide="badge-check" class="w-4 h-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Verified Ground-Truth Facts</h3>
+                        <p class="text-[11px] text-neutral-400">Direct mathematical observations from CDR data</p>
+                    </div>
+                </div>
+                <div id="factsListContainer" class="space-y-2.5">
+                    <div class="text-xs text-neutral-500 py-6 text-center">No facts rendered yet.</div>
+                </div>
+            </div>
+
+            <!-- Analytical Inferences & Leads -->
+            <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-6 space-y-4">
+                <div class="flex items-center gap-3 border-b border-neutral-800/80 pb-3">
+                    <span class="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <i data-lucide="crosshair" class="w-4 h-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Analytical Leads & Subpoena Targets</h3>
+                        <p class="text-[11px] text-neutral-400">Prioritized operational recommendations</p>
+                    </div>
+                </div>
+                <div id="leadsListContainer" class="space-y-2.5">
+                    <div class="text-xs text-neutral-500 py-6 text-center">No leads rendered yet.</div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- TAB 5: ANALYST CHAT STUDIO -->
+    <!-- ============================================================ -->
+
+    <div id="tabContentChat" class="hidden space-y-6">
+
+        <div class="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-6 space-y-5">
+            
+            <div class="flex items-center justify-between border-b border-neutral-800/80 pb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <i data-lucide="message-square-code" class="w-5 h-5 text-rose-400"></i>
+                        Interactive Forensic Analyst Assistant
+                    </h2>
+                    <p class="text-xs text-neutral-400 mt-0.5">
+                        Ask natural-language inquiries against verified case evidence and receive cited forensic answers.
+                    </p>
+                </div>
+                <div id="chatEngineIndicator" class="text-xs font-mono text-neutral-400">
+                    Engine: Auto
+                </div>
+            </div>
+
+            <!-- Quick Preset Chips for Examiners -->
+            <div>
+                <span class="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block mb-2">Examiner Demo Quick Presets:</span>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="setQuestionPreset('Who are the primary suspect contacts and what is their talk-time hierarchy?')" class="px-2.5 py-1 text-xs rounded-md bg-neutral-900 border border-neutral-800 hover:border-neutral-600 text-neutral-300 transition">
+                        🎯 Top Suspect Contacts
+                    </button>
+                    <button type="button" onclick="setQuestionPreset('Analyze all nocturnal and night-time calls between 00:00 and 05:00.')" class="px-2.5 py-1 text-xs rounded-md bg-neutral-900 border border-neutral-800 hover:border-neutral-600 text-neutral-300 transition">
+                        🌙 Night Calls Audit
+                    </button>
+                    <button type="button" onclick="setQuestionPreset('Did the target execute any impossible travel velocities or handset hopping?')" class="px-2.5 py-1 text-xs rounded-md bg-neutral-900 border border-neutral-800 hover:border-neutral-600 text-neutral-300 transition">
+                        🚀 Impossible Travel & Burners
+                    </button>
+                    <button type="button" onclick="setQuestionPreset('Classify the suspect behavioral archetype and detected counter-surveillance tactics.')" class="px-2.5 py-1 text-xs rounded-md bg-neutral-900 border border-neutral-800 hover:border-neutral-600 text-neutral-300 transition">
+                        👤 Suspect Profile & OpSec
+                    </button>
+                    <button type="button" onclick="setQuestionPreset('Draft a court-admissible forensic memorandum under Section 65B.')" class="px-2.5 py-1 text-xs rounded-md bg-neutral-900 border border-neutral-800 hover:border-neutral-600 text-neutral-300 transition">
+                        ⚖️ Section 65B Legal Memo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Input -->
+            <div class="space-y-3">
+                <textarea
+                    id="analystQuestionInput"
+                    rows="3"
+                    placeholder="Type an investigative question, e.g., 'What are the main anomalies detected and what search warrants should be requested?'"
+                    class="w-full rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 placeholder:text-neutral-600 px-4 py-3 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition font-sans"
+                ></textarea>
+
+                <div class="flex items-center justify-between">
+                    <span id="chatStatusText" class="text-xs text-neutral-500 font-mono">Press Ctrl + Enter to submit inquiry</span>
+                    <button
+                        id="askAnalystBtn"
+                        type="button"
+                        class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs shadow-md shadow-purple-600/20 flex items-center gap-2 transition cursor-pointer"
+                    >
+                        <i id="askIcon" data-lucide="send" class="w-3.5 h-3.5"></i>
+                        <span id="askBtnText">Submit Inquiry</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Answer Box -->
+            <div id="analystAnswerBox" class="hidden rounded-xl border border-neutral-800 bg-neutral-950 p-5 space-y-3">
+                <div class="flex items-center justify-between border-b border-neutral-800/60 pb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                        <span id="analystAnswerProvider" class="text-xs font-mono text-purple-300 uppercase font-semibold">TRIAD Forensic Analyst</span>
+                    </div>
+                    <button type="button" onclick="copyAnswerText()" class="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        <span id="copyBtnText">Copy</span>
+                    </button>
+                </div>
+                <div id="analystAnswerContent" class="text-sm text-neutral-200 leading-relaxed font-sans whitespace-pre-wrap"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+(function() {
+    "use strict";
+
+    const SESSION_ID = {{ session_id | tojson }};
+    let currentEngine = "auto";
+    let providersCache = null;
+    let intelligenceData = null;
+
+    // Helpers
+    function $(id) { return document.getElementById(id); }
+    function safe(val, def = "—") { return (val === null || val === undefined || val === "") ? def : val; }
+
+    function refreshIcons() {
+        if (window.lucide && typeof window.lucide.createIcons === "function") {
+            window.lucide.createIcons();
+        }
+    }
+
+    // Toggle Export Menu
+    window.toggleExportMenu = function() {
+        const menu = $("exportMenu");
+        if (menu) menu.classList.toggle("hidden");
+    };
+
+    document.addEventListener("click", function(e) {
+        const btn = $("exportDossierBtn");
+        const menu = $("exportMenu");
+        if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.add("hidden");
+        }
+    });
+
+    // Tab Navigation
+    window.switchTab = function(tabName) {
+        const tabs = ["assessment", "profile", "hypotheses", "facts", "chat"];
+        tabs.forEach(t => {
+            const content = $("tabContent" + t.charAt(0).toUpperCase() + t.slice(1));
+            const btn = $("tabBtn" + t.charAt(0).toUpperCase() + t.slice(1));
+            if (content) content.classList.add("hidden");
+            if (btn) {
+                btn.classList.remove("border-purple-500", "text-white");
+                btn.classList.add("border-transparent", "text-neutral-400");
+            }
+        });
+
+        const activeContent = $("tabContent" + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+        const activeBtn = $("tabBtn" + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+        if (activeContent) activeContent.classList.remove("hidden");
+        if (activeBtn) {
+            activeBtn.classList.remove("border-transparent", "text-neutral-400");
+            activeBtn.classList.add("border-purple-500", "text-white");
+        }
+        refreshIcons();
+    };
+
+    // Engine Mode Selector
+    window.setEngineMode = function(mode) {
+        currentEngine = mode;
+        const buttons = {
+            "auto": $("engineBtnAuto"),
+            "ollama": $("engineBtnOllama"),
+            "local_openai": $("engineBtnLocal"),
+            "cloud": $("engineBtnCloud"),
+            "offline": $("engineBtnOffline")
+        };
+
+        Object.keys(buttons).forEach(k => {
+            const b = buttons[k];
+            if (!b) return;
+            if (k === mode) {
+                b.classList.remove("text-neutral-400");
+                b.classList.add("bg-neutral-800", "text-white");
+            } else {
+                b.classList.remove("bg-neutral-800", "text-white");
+                b.classList.add("text-neutral-400");
+            }
+        });
+
+        const modelContainer = $("modelSelectContainer");
+        const select = $("engineModelSelect");
+        if (modelContainer && select && providersCache) {
+            select.innerHTML = '<option value="">Default Model</option>';
+            let models = [];
+            if (mode === "ollama" && providersCache.providers.ollama.available) {
+                models = providersCache.providers.ollama.models || [];
+            } else if (mode === "local_openai" && providersCache.providers.local_openai.available) {
+                models = providersCache.providers.local_openai.models || [];
+            }
+
+            if (models.length > 0) {
+                models.forEach(m => {
+                    const opt = document.createElement("option");
+                    opt.value = m;
+                    opt.textContent = m;
+                    select.appendChild(opt);
+                });
+                modelContainer.classList.remove("hidden");
+                modelContainer.classList.add("flex");
+            } else {
+                modelContainer.classList.add("hidden");
+                modelContainer.classList.remove("flex");
+            }
+        }
+
+        const chatIndicator = $("chatEngineIndicator");
+        if (chatIndicator) chatIndicator.textContent = "Engine: " + mode.toUpperCase();
+    };
+
+    // Probe Providers
+    window.checkProviders = async function(isManual = false) {
+        const pingIcon = $("pingIcon");
+        if (pingIcon) pingIcon.classList.add("animate-spin");
+
+        try {
+            const resp = await fetch("/api/ai-intelligence/providers");
+            if (!resp.ok) throw new Error("Failed to probe providers");
+            const data = await resp.json();
+            providersCache = data;
+
+            // Update status dots
+            const ollamaDot = $("ollamaDot");
+            const localDot = $("localDot");
+            const cloudDot = $("cloudDot");
+
+            if (ollamaDot) {
+                ollamaDot.className = "w-2 h-2 rounded-full " + (data.providers.ollama.available ? "bg-emerald-400" : "bg-neutral-600");
+            }
+            if (localDot) {
+                localDot.className = "w-2 h-2 rounded-full " + (data.providers.local_openai.available ? "bg-emerald-400" : "bg-neutral-600");
+            }
+            if (cloudDot) {
+                cloudDot.className = "w-2 h-2 rounded-full " + (data.providers.cloud.available ? "bg-emerald-400" : "bg-neutral-600");
+            }
+
+            const badge = $("engineStatusBadge");
+            if (badge) {
+                let activeDesc = "Offline Agent";
+                if (data.providers.ollama.available) activeDesc = "Ollama Online (" + (data.providers.ollama.models.length) + " models)";
+                else if (data.providers.local_openai.available) activeDesc = "LM Studio Online";
+                else if (data.providers.cloud.available) activeDesc = data.providers.cloud.provider + " Ready";
+
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>' + activeDesc + '</span>';
+            }
+
+            if (isManual) {
+                setEngineMode(currentEngine);
+            }
+        } catch (e) {
+            console.error("Provider check error:", e);
+        } finally {
+            if (pingIcon) pingIcon.classList.remove("animate-spin");
+            refreshIcons();
+        }
+    };
+
+    // Render Threat Risk Telemetry
+    function renderThreatRisk(risk) {
+        if (!risk) return;
+        const total = risk.total_score || 0;
+        const level = risk.level || "LOW";
+        const desc = risk.description || "";
+
+        const numEl = $("threatScoreNumber");
+        const barEl = $("threatScoreBar");
+        const badgeEl = $("threatLevelBadge");
+        const descEl = $("threatScoreDesc");
+
+        if (numEl) numEl.textContent = total;
+        if (barEl) {
+            barEl.style.width = total + "%";
+            barEl.className = "h-full rounded-full transition-all duration-700 " +
+                (total >= 75 ? "bg-rose-500 shadow-lg shadow-rose-500/50" :
+                 total >= 50 ? "bg-amber-500 shadow-lg shadow-amber-500/50" :
+                 total >= 25 ? "bg-blue-500" : "bg-emerald-500");
+        }
+        if (badgeEl) {
+            badgeEl.textContent = level;
+            badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase " +
+                (total >= 75 ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" :
+                 total >= 50 ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" :
+                 total >= 25 ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" :
+                 "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30");
+        }
+        if (descEl) descEl.textContent = desc;
+
+        // Breakdown mini-bars
+        const b = risk.breakdown || {};
+        if (b.velocity_risk) {
+            if ($("scoreVelText")) $("scoreVelText").textContent = b.velocity_risk.score + " / 25";
+            if ($("scoreVelBar")) $("scoreVelBar").style.width = (b.velocity_risk.score / 25 * 100) + "%";
+        }
+        if (b.hardware_risk) {
+            if ($("scoreHwText")) $("scoreHwText").textContent = b.hardware_risk.score + " / 25";
+            if ($("scoreHwBar")) $("scoreHwBar").style.width = (b.hardware_risk.score / 25 * 100) + "%";
+        }
+        if (b.temporal_risk) {
+            if ($("scoreTempText")) $("scoreTempText").textContent = b.temporal_risk.score + " / 25";
+            if ($("scoreTempBar")) $("scoreTempBar").style.width = (b.temporal_risk.score / 25 * 100) + "%";
+        }
+    }
+
+    // Render Suspect Profile
+    function renderSuspectProfile(profile) {
+        if (!profile) return;
+        if ($("profileTargetText")) $("profileTargetText").textContent = profile.target || "TARGET";
+        if ($("profileArchetypeText")) $("profileArchetypeText").textContent = profile.archetype || "Standard Subscriber";
+        if ($("profileArchetypeDesc")) $("profileArchetypeDesc").textContent = profile.archetype_description || "";
+
+        const op = profile.operational_profile || {};
+        if ($("profRecords")) $("profRecords").textContent = (op.total_records || 0).toLocaleString();
+        if ($("profContacts")) $("profContacts").textContent = (op.unique_contacts || 0).toLocaleString();
+        if ($("profTalkTime")) $("profTalkTime").textContent = op.talk_time || "—";
+        if ($("profDistance")) $("profDistance").textContent = (op.distance_traversed_km || 0).toFixed(1) + " km";
+        if ($("profNightPct")) $("profNightPct").textContent = (op.night_activity_percentage || 0) + "%";
+        if ($("profDirection")) $("profDirection").textContent = op.directional_ratio || "—";
+
+        // OpSec Tactics
+        const container = $("opsecTacticsContainer");
+        if (container) {
+            container.innerHTML = "";
+            const tactics = profile.counter_surveillance_tactics || [];
+            tactics.forEach(t => {
+                const el = document.createElement("div");
+                const sevColor = (t.severity === "CRITICAL" || t.severity === "HIGH") ? "text-rose-400 bg-rose-500/10 border-rose-500/20" :
+                                 (t.severity === "MEDIUM") ? "text-amber-400 bg-amber-500/10 border-amber-500/20" :
+                                 "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+
+                el.className = "p-3.5 rounded-lg bg-neutral-900/90 border border-neutral-800 flex flex-col md:flex-row md:items-start justify-between gap-3";
+                el.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-white">${t.name}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${sevColor}">${t.severity}</span>
+                        </div>
+                        <p class="text-xs text-neutral-400 leading-relaxed">${t.evidence}</p>
+                    </div>
+                    <div class="md:text-right shrink-0">
+                        <span class="text-[10px] uppercase font-mono text-neutral-500 block">Subpoena Action</span>
+                        <span class="text-xs font-medium text-purple-300">${t.remedy}</span>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+    }
+
+    // Render Hypotheses Matrix
+    function renderHypothesesMatrix(hypotheses) {
+        const container = $("hypothesesCardsContainer");
+        const badge = $("hypothesesBadge");
+        if (!container) return;
+
+        container.innerHTML = "";
+        if (!hypotheses || hypotheses.length === 0) {
+            container.innerHTML = '<div class="text-xs text-neutral-500 py-6 text-center">No hypotheses formulated yet.</div>';
+            return;
+        }
+
+        if (badge) {
+            badge.textContent = hypotheses.length;
+            badge.classList.remove("hidden");
+        }
+
+        hypotheses.forEach(h => {
+            const card = document.createElement("div");
+            card.className = "rounded-xl border border-neutral-800 bg-neutral-950/70 p-5 space-y-4 hover:border-neutral-700 transition";
+
+            let evidenceHtml = "";
+            (h.grounded_evidence || []).forEach(ev => {
+                evidenceHtml += `<li class="text-xs text-neutral-300 flex items-start gap-2">
+                    <span class="text-emerald-400 mt-0.5">•</span>
+                    <span>${ev}</span>
+                </li>`;
+            });
+
+            let actionsHtml = "";
+            (h.recommended_actions || []).forEach((act, idx) => {
+                actionsHtml += `<li class="text-xs text-purple-300 flex items-start gap-2">
+                    <span class="font-mono text-neutral-500 text-[10px] mt-0.5">${idx + 1}.</span>
+                    <span>${act}</span>
+                </li>`;
+            });
+
+            card.innerHTML = `
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-neutral-800/80 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-neutral-800 text-neutral-300">${h.id}</span>
+                        <h3 class="text-sm font-bold text-white">${h.title}</h3>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-mono text-neutral-400">Confidence:</span>
+                        <span class="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">${h.confidence}</span>
+                    </div>
+                </div>
+
+                <p class="text-xs text-neutral-400 leading-relaxed">${h.summary}</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div class="bg-neutral-900/60 p-3.5 rounded-lg border border-neutral-800/80">
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-neutral-500 block mb-2">Verified Grounded Facts</span>
+                        <ul class="space-y-1.5">${evidenceHtml}</ul>
+                    </div>
+                    <div class="bg-neutral-900/60 p-3.5 rounded-lg border border-neutral-800/80">
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-neutral-500 block mb-2">Actionable Warrants & Next Steps</span>
+                        <ul class="space-y-1.5">${actionsHtml}</ul>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-neutral-500 italic border-t border-neutral-800/60 pt-2.5">
+                    <strong>Alternative / Benign Hypothesis:</strong> ${h.competing_explanation}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // Render Facts & Leads
+    function renderFactsAndLeads(facts, leads) {
+        const fContainer = $("factsListContainer");
+        const lContainer = $("leadsListContainer");
+
+        if (fContainer) {
+            fContainer.innerHTML = "";
+            (facts || []).forEach(f => {
+                const el = document.createElement("div");
+                el.className = "p-3 rounded-lg bg-neutral-900/60 border border-neutral-800 text-xs flex items-start gap-2.5";
+                el.innerHTML = `
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0 mt-0.5">${f.label}</span>
+                    <span class="text-neutral-300 leading-relaxed">${f.text}</span>
+                `;
+                fContainer.appendChild(el);
+            });
+        }
+
+        if (lContainer) {
+            lContainer.innerHTML = "";
+            (leads || []).forEach(l => {
+                const el = document.createElement("div");
+                const sevColor = (l.severity === "CRITICAL" || l.severity === "HIGH") ? "text-rose-400 bg-rose-500/10 border-rose-500/20" :
+                                 (l.severity === "MEDIUM") ? "text-amber-400 bg-amber-500/10 border-amber-500/20" :
+                                 "text-blue-400 bg-blue-500/10 border-blue-500/20";
+
+                el.className = "p-3 rounded-lg bg-neutral-900/60 border border-neutral-800 space-y-1";
+                el.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-white">${l.title}</span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${sevColor}">${l.severity}</span>
+                    </div>
+                    <p class="text-xs text-neutral-400 leading-relaxed">${l.detail}</p>
+                `;
+                lContainer.appendChild(el);
+            });
+        }
+    }
+
+    // Generate Full Assessment Action
+    window.generateAssessment = async function() {
+        const btn = $("generateAssessmentBtn");
+        const btnText = $("generateBtnText");
+        const icon = $("generateIcon");
+        const loading = $("assessmentLoading");
+        const empty = $("assessmentEmpty");
+        const content = $("assessmentContent");
+        const textEl = $("assessmentText");
+
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.textContent = "Analyzing...";
+        if (icon) { icon.setAttribute("data-lucide", "loader-2"); icon.classList.add("animate-spin"); }
+        if (loading) loading.classList.remove("hidden");
+        if (empty) empty.classList.add("hidden");
+        if (content) content.classList.add("hidden");
+
+        const selectedModel = $("engineModelSelect") ? $("engineModelSelect").value : "";
+
+        try {
+            const resp = await fetch("/api/ai-intelligence/" + encodeURIComponent(SESSION_ID), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    engine: currentEngine,
+                    model: selectedModel
+                })
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.error || ("Server returned HTTP " + resp.status));
+            }
+
+            const data = await resp.json();
+            const intel = data.intelligence || {};
+            intelligenceData = intel;
+
+            // Render all components
+            renderThreatRisk(intel.threat_risk);
+            renderSuspectProfile(intel.suspect_profile);
+            renderHypothesesMatrix(intel.hypotheses_matrix);
+            renderFactsAndLeads(intel.facts, intel.leads);
+
+            if (textEl) {
+                textEl.textContent = intel.ai_summary || "Assessment complete.";
+            }
+            if ($("assessmentProviderLabel")) {
+                $("assessmentProviderLabel").textContent = "Engine: " + (intel.provider || "TRIAD Neural Kernel") + " (" + (intel.model || "v2.0") + ")";
+            }
+
+            if (content) content.classList.remove("hidden");
+        } catch (e) {
+            console.error("Assessment generation error:", e);
+            alert("Error generating AI assessment: " + e.message);
+            if (empty) empty.classList.remove("hidden");
+        } finally {
+            if (loading) loading.classList.add("hidden");
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "Generate Full Assessment";
+            if (icon) { icon.setAttribute("data-lucide", "sparkles"); icon.classList.remove("animate-spin"); }
+            refreshIcons();
+        }
+    };
+
+    // Preset Question Buttons
+    window.setQuestionPreset = function(q) {
+        const input = $("analystQuestionInput");
+        if (input) {
+            input.value = q;
+            input.focus();
+        }
+    };
+
+    // Ask Analyst Action
+    window.askAnalyst = async function() {
+        const input = $("analystQuestionInput");
+        const btn = $("askAnalystBtn");
+        const btnText = $("askBtnText");
+        const icon = $("askIcon");
+        const statusText = $("chatStatusText");
+        const answerBox = $("analystAnswerBox");
+        const answerContent = $("analystAnswerContent");
+        const providerBadge = $("analystAnswerProvider");
+
+        if (!input) return;
+        const q = input.value.trim();
+        if (!q) {
+            input.focus();
+            return;
+        }
+
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.textContent = "Analyzing...";
+        if (icon) { icon.setAttribute("data-lucide", "loader-2"); icon.classList.add("animate-spin"); }
+        if (statusText) statusText.textContent = "Querying forensic intelligence knowledge graph...";
+
+        const selectedModel = $("engineModelSelect") ? $("engineModelSelect").value : "";
+
+        try {
+            const resp = await fetch("/api/ai-intelligence/" + encodeURIComponent(SESSION_ID) + "/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    question: q,
+                    engine: currentEngine,
+                    model: selectedModel
+                })
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || "Failed to process question.");
+
+            if (answerContent) answerContent.textContent = data.answer || "No response received.";
+            if (providerBadge) providerBadge.textContent = (data.provider || "LOCAL AGENT") + " — " + (data.model || "v2.0");
+            if (answerBox) answerBox.classList.remove("hidden");
+            if (statusText) statusText.textContent = "Analysis complete.";
+        } catch (e) {
+            console.error("Analyst error:", e);
+            if (statusText) statusText.textContent = "Error: " + e.message;
+        } finally {
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "Submit Inquiry";
+            if (icon) { icon.setAttribute("data-lucide", "send"); icon.classList.remove("animate-spin"); }
+            refreshIcons();
+        }
+    };
+
+    // Copy Answer
+    window.copyAnswerText = function() {
+        const text = $("analystAnswerContent") ? $("analystAnswerContent").textContent : "";
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            const btnText = $("copyBtnText");
+            if (btnText) {
+                btnText.textContent = "Copied!";
+                setTimeout(() => { btnText.textContent = "Copy"; }, 2000);
+            }
+        });
+    };
+
+    // Initialize Page
+    document.addEventListener("DOMContentLoaded", function() {
+        checkProviders(false);
+
+        const genBtn = $("generateAssessmentBtn");
+        if (genBtn) genBtn.addEventListener("click", window.generateAssessment);
+
+        const askBtn = $("askAnalystBtn");
+        if (askBtn) askBtn.addEventListener("click", window.askAnalyst);
+
+        const qInput = $("analystQuestionInput");
+        if (qInput) {
+            qInput.addEventListener("keydown", function(e) {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    window.askAnalyst();
+                }
+            });
+        }
+
+        refreshIcons();
+    });
+
+})();
+</script>
+{% endblock %}

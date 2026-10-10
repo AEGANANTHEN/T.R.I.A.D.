@@ -1,0 +1,5787 @@
+{% extends "layout.html" %}
+
+{% block title %}Forensic Dashboard — {{ data.target }} — CDR Intel{% endblock %}
+{% block page_title %}Forensic Dashboard / {{ data.target }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6" id="dashboard-root">
+
+  <!-- ── Target Header ───────────────────────────────────────────── -->
+  <div class="flex flex-wrap items-center justify-between gap-4" id="section-dashboard">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 bg-cyber-cyan/20 border border-cyber-cyan/40 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i data-lucide="phone-call" class="w-5 h-5 text-cyber-cyan"></i>
+      </div>
+
+      <div>
+        <h1 class="text-xl font-bold text-white font-mono">
+          {{ data.target | default('Target') }}
+        </h1>
+
+        <p class="text-xs text-slate-500">
+          {{ data.filename | default('CDR File') }}
+          &nbsp;•&nbsp;
+          <span class="text-cyber-emerald font-mono">
+            {{ (data.kpis.date_range if (data.kpis and data.kpis.date_range) else '—') }}
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 flex-wrap">
+
+      <!-- SHA-256 Hash badge -->
+      <div class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg flex items-center gap-2">
+        <i data-lucide="lock" class="w-3.5 h-3.5 text-cyber-emerald"></i>
+
+        <span class="text-[10px] font-mono text-slate-500">
+          SHA-256:
+        </span>
+
+        <span
+          class="text-[10px] font-mono text-cyber-emerald"
+          title="{{ data.metadata.sha256 if data.metadata else '' }}"
+        >
+          {{ (data.metadata.sha256[:16] if (data.metadata and data.metadata.sha256) else '—') }}...
+        </span>
+      </div>
+
+      <!-- Export Report Dropdown -->
+      <div class="relative inline-block text-left" id="export-dropdown-wrapper">
+
+        <button
+          onclick="toggleExportMenu()"
+          type="button"
+          class="px-3.5 py-1.5 bg-cyber-cyan/15 border border-cyber-cyan/40 rounded-lg text-xs font-mono font-bold text-cyber-cyan hover:bg-cyber-cyan/25 transition-all flex items-center gap-1.5 shadow-md shadow-cyber-cyan/10"
+        >
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          Export Report ▾
+        </button>
+
+        <div
+          id="export-menu"
+          class="hidden absolute right-0 mt-2 w-56 bg-cyber-card border border-cyber-border rounded-xl shadow-2xl py-2 z-50 font-mono text-xs"
+        >
+
+          <a
+            href="{{ url_for('report_view', session_id=session_id) }}"
+            target="_blank"
+            onclick="closeExportMenu()"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="printer" class="w-4 h-4 text-cyber-cyan"></i>
+
+            <div>
+              <div class="font-bold">Printable PDF Dossier</div>
+              <div class="text-[10px] text-slate-500">
+                Official Forensic Print/PDF
+              </div>
+            </div>
+          </a>
+
+          <a
+            href="{{ url_for('export_excel', session_id=session_id) }}"
+            download="CDR_Forensic_Report_{{ session_id[:8] }}.xlsx"
+            onclick="handleExportClick(event, 'Excel Workbook (.XLSX)')"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-cyber-emerald"></i>
+
+            <div>
+              <div class="font-bold">Excel Workbook (.XLSX)</div>
+              <div class="text-[10px] text-slate-500">
+                Multi-tab structured analysis
+              </div>
+            </div>
+          </a>
+
+          <a
+            href="{{ url_for('export_csv', session_id=session_id) }}"
+            download="CDR_Records_{{ session_id[:8] }}.csv"
+            onclick="handleExportClick(event, 'Cleaned CSV Records')"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="file-text" class="w-4 h-4 text-cyber-amber"></i>
+
+            <div>
+              <div class="font-bold">Cleaned Records (.CSV)</div>
+              <div class="text-[10px] text-slate-500">
+                Normalized raw rows
+              </div>
+            </div>
+          </a>
+
+          <div class="border-t border-cyber-border my-1"></div>
+
+          <a
+            href="{{ url_for('export_json', session_id=session_id) }}"
+            download="CDR_Dossier_{{ session_id[:8] }}.json"
+            onclick="handleExportClick(event, 'JSON Intelligence Dossier')"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="code" class="w-4 h-4 text-cyber-purple"></i>
+
+            <div>
+              <div class="font-bold">JSON Forensic Dossier</div>
+              <div class="text-[10px] text-slate-500">
+                Machine-readable payload
+              </div>
+            </div>
+          </a>
+
+        </div>
+      </div>
+
+      <a
+        href="{{ url_for('index') }}"
+        class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+      >
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        New Analysis
+      </a>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- KPI CARDS                                                      -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div
+    class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4"
+    id="kpi-grid"
+  >
+
+    {% set kpis = [
+      ("total_records", "Total Records", "database", "#38bdf8", ""),
+      ("unique_contacts", "Unique Contacts", "users", "#10b981", ""),
+      ("total_duration_hms", "Talk Time", "clock", "#818cf8", ""),
+      ("night_calls", "Night Calls", "moon", "#f43f5e", "(00:00–05:00)"),
+      ("imei_count", "IMEI Count", "smartphone", "#f59e0b", "Handsets"),
+      ("sms_count", "SMS Count", "message-square", "#38bdf8", "Messages")
+    ] %}
+
+    {% for key, label, icon, color, sub in kpis %}
+
+    <div class="kpi-card glass-card p-4 flex flex-col gap-2 hover:border-slate-700 transition-all duration-200">
+
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">
+          {{ label }}
+        </span>
+
+        <i
+          data-lucide="{{ icon }}"
+          class="w-4 h-4"
+          style="color: {{ color }};"
+        ></i>
+      </div>
+
+      <div
+        class="text-2xl font-bold font-mono"
+        style="color: {{ color }};"
+      >
+        {{ (data.kpis[key] if (data.kpis and key in data.kpis) else "—") }}
+      </div>
+
+      {% if sub %}
+      <div class="text-[10px] text-slate-600">
+        {{ sub }}
+      </div>
+      {% endif %}
+
+    </div>
+
+    {% endfor %}
+
+  </div>
+
+
+  <!-- ── Call Direction Split ──────────────────────────────────────── -->
+
+  <div class="grid grid-cols-2 gap-3">
+
+    <div class="glass-card p-3 flex items-center gap-3">
+
+      <div class="w-8 h-8 bg-cyber-emerald/20 rounded-lg flex items-center justify-center">
+        <i data-lucide="phone-incoming" class="w-4 h-4 text-cyber-emerald"></i>
+      </div>
+
+      <div>
+        <p class="text-xs text-slate-500">Incoming</p>
+
+        <p class="text-lg font-bold font-mono text-cyber-emerald">
+          {{ data.kpis.incoming if (data.kpis and data.kpis.incoming is defined) else 0 }}
+        </p>
+      </div>
+
+      <div class="ml-auto text-right">
+        <p class="text-xs text-slate-500">of total</p>
+
+        <p class="text-sm font-mono text-slate-300">
+          {% if data.kpis and data.kpis.total_records and data.kpis.total_records > 0 %}
+            {{ "%.1f"|format(data.kpis.incoming / data.kpis.total_records * 100) }}%
+          {% else %}
+            —
+          {% endif %}
+        </p>
+      </div>
+
+    </div>
+
+
+    <div class="glass-card p-3 flex items-center gap-3">
+
+      <div class="w-8 h-8 bg-cyber-cyan/20 rounded-lg flex items-center justify-center">
+        <i data-lucide="phone-outgoing" class="w-4 h-4 text-cyber-cyan"></i>
+      </div>
+
+      <div>
+        <p class="text-xs text-slate-500">Outgoing</p>
+
+        <p class="text-lg font-bold font-mono text-cyber-cyan">
+          {{ data.kpis.outgoing if (data.kpis and data.kpis.outgoing is defined) else 0 }}
+        </p>
+      </div>
+
+      <div class="ml-auto text-right">
+        <p class="text-xs text-slate-500">of total</p>
+
+        <p class="text-sm font-mono text-slate-300">
+          {% if data.kpis and data.kpis.total_records and data.kpis.total_records > 0 %}
+            {{ "%.1f"|format(data.kpis.outgoing / data.kpis.total_records * 100) }}%
+          {% else %}
+            —
+          {% endif %}
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ANOMALY FLAGS BANNER                                           -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  {% set travel_count = data.impossible_travel | length %}
+  {% set swap_flag = data.device_swaps.handset_hopping or data.device_swaps.sim_swapping %}
+
+  {% if travel_count > 0 or swap_flag %}
+
+  <div class="glass-card border-cyber-rose/30 bg-cyber-rose/5 p-4">
+
+    <div class="flex items-center gap-3 mb-3">
+      <div class="beacon beacon-red"></div>
+
+      <h3 class="text-sm font-bold text-cyber-rose uppercase tracking-wider">
+        ⚠ Forensic Anomalies Detected
+      </h3>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+
+      {% if travel_count > 0 %}
+      <div class="alert-badge-red">
+        <i data-lucide="zap" class="w-3 h-3"></i>
+        {{ travel_count }} Impossible Travel Event{% if travel_count != 1 %}s{% endif %}
+      </div>
+      {% endif %}
+
+      {% if data.device_swaps.handset_hopping %}
+      <div class="alert-badge-amber">
+        <i data-lucide="smartphone" class="w-3 h-3"></i>
+        Handset Hopping ({{ data.device_swaps.imei_count }} IMEIs)
+      </div>
+      {% endif %}
+
+      {% if data.device_swaps.sim_swapping %}
+      <div class="alert-badge-amber">
+        <i data-lucide="credit-card" class="w-3 h-3"></i>
+        SIM Swapping ({{ data.device_swaps.imsi_count }} IMSIs)
+      </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+  {% endif %}
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CHARTS ROW 1: Hourly + DOW                                    -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- Hourly Heatmap Bar Chart -->
+
+    <div class="xl:col-span-2 glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <div>
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-cyber-cyan"></i>
+            24-Hour Call Distribution
+          </h3>
+
+          <p class="text-xs text-slate-500 mt-0.5">
+            Call frequency by hour of day
+          </p>
+        </div>
+
+        <div class="flex gap-2 text-[10px] font-mono">
+          <span class="px-2 py-0.5 bg-cyber-purple/20 text-cyber-purple rounded">
+            Night 00-05
+          </span>
+
+          <span class="px-2 py-0.5 bg-cyber-cyan/20 text-cyber-cyan rounded">
+            Day 06-21
+          </span>
+
+          <span class="px-2 py-0.5 bg-cyber-amber/20 text-cyber-amber rounded">
+            Evening 22+
+          </span>
+        </div>
+
+      </div>
+
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-hourly"></canvas>
+      </div>
+
+    </div>
+
+
+    <!-- Day-of-Week Radar -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <div>
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="calendar" class="w-4 h-4 text-cyber-emerald"></i>
+            Day-of-Week Pattern
+          </h3>
+
+          <p class="text-xs text-slate-500 mt-0.5">
+            Weekly activity distribution
+          </p>
+        </div>
+
+      </div>
+
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-dow"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CHARTS ROW 2: Call Types + Top Contacts                       -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- Call Type Donut -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="pie-chart" class="w-4 h-4 text-cyber-purple"></i>
+          Call Type Breakdown
+        </h3>
+
+      </div>
+
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-calltypes"></canvas>
+      </div>
+
+    </div>
+
+
+    <!-- Top Contacts Bar -->
+
+    <div class="xl:col-span-2 glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="users" class="w-4 h-4 text-cyber-amber"></i>
+          Top 10 Contacts by Call Frequency
+        </h3>
+
+      </div>
+
+      <div class="chart-container" style="height: 220px;">
+        <canvas id="chart-contacts"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- LINK ANALYSIS (Vis.js Network)                                 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div
+    class="glass-card p-5 scroll-mt-20"
+    id="section-link-analysis"
+  >
+
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+
+      <div>
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="git-fork" class="w-4 h-4 text-cyber-cyan"></i>
+          Communication Network Graph — Link Analysis
+        </h3>
+
+        <p class="text-xs text-slate-500 mt-0.5">
+          Interactive • Click nodes to inspect • Scroll to zoom
+        </p>
+
+      </div>
+
+      <div class="flex gap-2">
+
+        <button
+          onclick="resetGraph()"
+          class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5"
+        >
+          <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+          Reset
+        </button>
+
+        <button
+          onclick="fitGraph()"
+          class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5"
+        >
+          <i data-lucide="maximize-2" class="w-3 h-3"></i>
+          Fit
+        </button>
+
+        <button
+          onclick="togglePhysics()"
+          class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1.5"
+          id="physics-btn"
+        >
+          <i data-lucide="zap" class="w-3 h-3"></i>
+          Physics
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- Graph Legend -->
+
+    <div class="flex flex-wrap gap-3 mb-3 text-[10px] font-mono">
+
+      <span class="flex items-center gap-1.5">
+        <span
+          class="w-3 h-3 rounded-full inline-block"
+          style="background:#38bdf8"
+        ></span>
+        Target Number
+      </span>
+
+      <span class="flex items-center gap-1.5">
+        <span
+          class="w-3 h-3 rounded-full inline-block"
+          style="background:#f43f5e"
+        ></span>
+        High-frequency (20+ calls)
+      </span>
+
+      <span class="flex items-center gap-1.5">
+        <span
+          class="w-3 h-3 rounded-full inline-block"
+          style="background:#f59e0b"
+        ></span>
+        Medium (10–19)
+      </span>
+
+      <span class="flex items-center gap-1.5">
+        <span
+          class="w-3 h-3 rounded-full inline-block"
+          style="background:#10b981"
+        ></span>
+        Low (5–9)
+      </span>
+
+      <span class="flex items-center gap-1.5">
+        <span
+          class="w-3 h-3 rounded-full inline-block"
+          style="background:#64748b"
+        ></span>
+        Minimal
+      </span>
+
+    </div>
+
+
+    <!-- Network container -->
+
+    <div
+      id="network-graph"
+      class="vis-network-container w-full rounded-xl border border-cyber-border"
+      style="height: 500px;"
+    ></div>
+
+
+    <!-- Node Inspector Popup -->
+
+    <div
+      id="node-inspector"
+      class="hidden mt-3 p-4 bg-cyber-bg border border-cyber-cyan/30 rounded-xl"
+    >
+
+      <div class="flex items-center justify-between mb-3">
+
+        <h4 class="text-sm font-bold text-cyber-cyan flex items-center gap-2">
+          <i data-lucide="user-search" class="w-4 h-4"></i>
+          Contact Inspector
+        </h4>
+
+        <button
+          onclick="document.getElementById('node-inspector').classList.add('hidden')"
+          class="text-slate-500 hover:text-white"
+        >
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+
+      </div>
+
+      <div
+        id="node-inspector-content"
+        class="grid grid-cols-2 sm:grid-cols-4 gap-3"
+      ></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- MULTI-LAYER TACTICAL GIS & TRAJECTORY ANALYSIS                 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div
+    class="glass-card p-5 scroll-mt-20"
+    id="section-geo-tracking"
+  >
+
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+
+      <div>
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="map" class="w-4 h-4 text-cyber-cyan"></i>
+          Multi-Layer Tactical GIS &amp; Trajectory Analysis
+        </h3>
+
+        <p class="text-xs text-slate-500 mt-0.5">
+          Zero-Key Forensic GIS • Weather Radar • Open Traffic Flow • Hop Vectors (v = Δd/Δt) • Dwell Heatmaps
+        </p>
+
+      </div>
+
+
+      <!-- Quick-Toggle Floating Badges Dock -->
+
+      <div class="flex gap-2 items-center flex-wrap">
+
+        <button
+          onclick="toggleBaseLayerQuick('satellite')"
+          id="quick-satellite-btn"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-300 hover:text-white hover:border-cyber-cyan transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>🛰️</span>
+          <span>Satellite</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('cluster')"
+          id="quick-cluster-btn"
+          class="px-2.5 py-1.5 bg-cyber-cyan/20 border border-cyber-cyan/50 rounded-lg text-xs text-cyber-cyan font-bold hover:bg-cyber-cyan/30 transition-all flex items-center gap-1.5 font-mono"
+          title="Toggle Marker Clustering"
+        >
+          <span>🧩</span>
+          <span>Cluster</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('radar')"
+          id="quick-radar-btn"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-300 hover:text-white hover:border-cyber-cyan transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>🌧️</span>
+          <span>Radar</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('cables')"
+          id="quick-cables-btn"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-300 hover:text-white hover:border-cyan-400 transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>🌊</span>
+          <span>Submarine Cables</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('earthquakes')"
+          id="quick-quakes-btn"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-300 hover:text-white hover:border-amber-400 transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>💥</span>
+          <span>Earthquakes</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('terminator')"
+          id="quick-terminator-btn"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-300 hover:text-white hover:border-blue-400 transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>☀️</span>
+          <span>Terminator</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('adsb')"
+          id="quick-adsb-btn"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-300 hover:text-white hover:border-emerald-400 transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>✈️</span>
+          <span>ADS-B Flights</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('evidence')"
+          id="quick-evidence-btn"
+          class="px-2.5 py-1.5 bg-amber-500/15 border border-amber-500/40 rounded-lg text-xs text-amber-300 hover:bg-amber-500/25 transition-all flex items-center gap-1.5 font-mono font-bold"
+        >
+          <span>🎥</span>
+          <span>Seized Evidence</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('heatmap')"
+          id="quick-heat-btn"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-300 hover:text-white hover:border-cyber-cyan transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>🔥</span>
+          <span>Heatmap</span>
+        </button>
+
+        <button
+          onclick="toggleOverlayQuick('trajectory')"
+          id="quick-traj-btn"
+          class="px-2.5 py-1.5 bg-cyber-cyan/20 border border-cyber-cyan/50 rounded-lg text-xs text-cyber-cyan font-bold hover:bg-cyber-cyan/30 transition-all flex items-center gap-1.5 font-mono"
+        >
+          <span>📐</span>
+          <span>Trajectory</span>
+        </button>
+
+        <button
+          onclick="resetMapView()"
+          class="px-2.5 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs text-slate-400 hover:text-white hover:border-cyber-cyan transition-all flex items-center gap-1"
+          title="Fit All Hops into View (Smooth Zoom)"
+        >
+          <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- Map Info Sub-Bar -->
+
+    <div class="flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono mb-3 bg-cyber-surface/40 p-2.5 rounded-lg border border-cyber-border/60">
+
+      <div class="flex flex-wrap items-center gap-4">
+
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="w-2.5 h-2.5 rounded-full inline-block bg-sky-400"></span>
+          Outgoing Hop
+        </span>
+
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="w-2.5 h-2.5 rounded-full inline-block bg-emerald-400"></span>
+          Incoming Hop
+        </span>
+
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="w-2.5 h-2.5 rounded-full inline-block bg-amber-400"></span>
+          SMS Event
+        </span>
+
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="w-2.5 h-2.5 rounded-full inline-block bg-rose-500 animate-pulse"></span>
+          Night-Owl (00:00–05:00)
+        </span>
+
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class="text-slate-400" id="gis-stats-badge">
+          Multi-Layer Tactical GIS Active
+        </span>
+      </div>
+
+    </div>
+
+
+    <!-- Full-Width Interactive Map Workspace -->
+
+    <div
+      id="map-container"
+      class="w-full rounded-2xl overflow-hidden border border-cyber-border relative bg-slate-950 shadow-2xl"
+      style="height: 650px;"
+    >
+
+      <div id="cdr-map" style="width:100%;height:100%;"></div>
+
+
+      <!-- Slide-Out Interactive Call Inspector Drawer -->
+
+      <div
+        id="call-inspector-drawer"
+        class="hidden absolute bottom-4 left-4 right-4 md:right-auto md:w-[480px] bg-slate-900/95 backdrop-blur-xl border border-sky-400/40 rounded-2xl p-4 shadow-2xl z-[1000] text-slate-100 font-mono transition-all duration-300 max-h-[90%] overflow-y-auto"
+      >
+
+        <!-- Header -->
+
+        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2.5 mb-3">
+
+          <div class="flex items-center gap-2">
+
+            <span
+              class="px-2 py-0.5 rounded-full bg-cyber-cyan/20 border border-cyber-cyan/40 text-cyber-cyan text-xs font-bold"
+              id="insp-hop-badge"
+            >
+              Hop #1
+            </span>
+
+            <span
+              class="text-xs text-slate-300 font-bold"
+              id="insp-timestamp"
+            >
+              2024-01-01 00:00:00
+            </span>
+
+          </div>
+
+          <div class="flex items-center gap-1.5">
+
+            <button
+              onclick="navigateTower(-1)"
+              class="p-1 text-slate-400 hover:text-white bg-slate-800 border border-slate-700 rounded hover:bg-slate-700"
+              title="Previous Hop"
+            >
+              <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <button
+              onclick="navigateTower(1)"
+              class="p-1 text-slate-400 hover:text-white bg-slate-800 border border-slate-700 rounded hover:bg-slate-700"
+              title="Next Hop"
+            >
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <button
+              onclick="closeCallInspector()"
+              class="p-1 text-slate-400 hover:text-rose-400 ml-1"
+              title="Close Drawer"
+            >
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- Impossible Velocity Alert Banner -->
+
+        <div
+          id="insp-impossible-alert"
+          class="hidden mb-3 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-xs text-red-300 space-y-1"
+        >
+
+          <div class="flex items-center gap-2 font-bold text-red-200">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
+
+            <span>
+              SUPERSONIC VELOCITY / IMPOSSIBLE TRAVEL ANOMALY
+            </span>
+          </div>
+
+          <p
+            class="text-[11px] text-red-300"
+            id="insp-impossible-text"
+          >
+            Calculated hop velocity exceeds physical threshold (&gt; 900 km/h). Potential SIM Cloning or CDR tampering.
+          </p>
+
+        </div>
+
+
+        <!-- Metric Details Grid -->
+
+        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+
+          <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] uppercase block">
+              Caller / Target
+            </span>
+            <span
+              class="text-white font-bold text-xs"
+              id="insp-caller"
+            >
+              —
+            </span>
+          </div>
+
+          <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] uppercase block">
+              Receiver / Contact
+            </span>
+            <span
+              class="text-white font-bold text-xs"
+              id="insp-receiver"
+            >
+              —
+            </span>
+          </div>
+
+          <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] uppercase block">
+              Call Type &amp; Duration
+            </span>
+
+            <div class="flex items-center gap-2 mt-0.5">
+
+              <span
+                class="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                id="insp-call-type-badge"
+              >
+                OUTGOING
+              </span>
+
+              <span
+                class="text-slate-300 font-bold"
+                id="insp-duration"
+              >
+                0s
+              </span>
+
+            </div>
+          </div>
+
+          <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] uppercase block">
+              Tower Cell ID
+            </span>
+
+            <span
+              class="text-cyber-cyan font-bold text-xs truncate block"
+              id="insp-cell-id"
+              title=""
+            >
+              —
+            </span>
+          </div>
+
+          <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] uppercase block">
+              Coordinates
+            </span>
+
+            <span
+              class="text-slate-300 text-[11px]"
+              id="insp-coords"
+            >
+              —
+            </span>
+          </div>
+
+          <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] uppercase block">
+              Velocity Vector (v = Δd/Δt)
+            </span>
+
+            <span
+              class="text-cyber-emerald font-bold text-xs"
+              id="insp-velocity"
+            >
+              —
+            </span>
+          </div>
+
+        </div>
+
+
+        <!-- Handset Identifiers -->
+
+        <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 text-[11px] mb-3 space-y-1">
+
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">
+              IMEI Handset:
+            </span>
+
+            <span
+              class="text-slate-300 font-bold"
+              id="insp-imei"
+            >
+              —
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">
+              IMSI Subscriber:
+            </span>
+
+            <span
+              class="text-slate-300 font-bold"
+              id="insp-imsi"
+            >
+              —
+            </span>
+          </div>
+
+        </div>
+
+
+        <!-- Forensic Cell Tower & RAN Telemetry Card -->
+
+        <div
+          class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 mb-3 space-y-2.5"
+          id="insp-tower-telecom-box"
+        >
+
+          <div class="flex items-center justify-between">
+
+            <span class="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="radio-tower" class="w-3.5 h-3.5 text-cyber-cyan"></i>
+              Cell Tower &amp; Sector RAN
+            </span>
+
+            <span
+              class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+              id="insp-tower-status"
+            >
+              OPERATIONAL
+            </span>
+
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+
+            <div class="bg-slate-900/80 p-2 rounded border border-slate-800/80">
+              <div class="text-[9px] text-slate-500 uppercase">
+                Sector / Azimuth
+              </div>
+
+              <div
+                class="text-white font-bold"
+                id="insp-azimuth"
+              >
+                0° (Omni)
+              </div>
+            </div>
+
+            <div class="bg-slate-900/80 p-2 rounded border border-slate-800/80">
+              <div class="text-[9px] text-slate-500 uppercase">
+                Network Carrier
+              </div>
+
+              <div
+                class="text-emerald-400 font-bold"
+                id="insp-carrier"
+              >
+                RELIANCE JIO
+              </div>
+            </div>
+
+            <div class="bg-slate-900/80 p-2 rounded border border-slate-800/80">
+              <div class="text-[9px] text-slate-500 uppercase">
+                Geographic Sector
+              </div>
+
+              <div
+                class="text-sky-300 font-bold truncate"
+                id="insp-location"
+              >
+                Mumbai Urban
+              </div>
+            </div>
+
+            <div class="bg-slate-900/80 p-2 rounded border border-slate-800/80">
+              <div class="text-[9px] text-slate-500 uppercase">
+                Tower Call Volume
+              </div>
+
+              <div
+                class="text-purple-300 font-bold"
+                id="insp-tower-volume"
+              >
+                —
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- DEMS Vault Link & Actions -->
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+
+          <a
+            href="{{ url_for('dems.vault_view') }}"
+            target="_blank"
+            class="flex-1 px-3 py-2 bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan hover:bg-cyber-cyan/30 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            DEMS Evidence Vault
+          </a>
+
+          <button
+            onclick="centerMapOnCurrentHop()"
+            class="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs rounded-lg hover:bg-slate-700 transition-all flex items-center gap-1"
+            title="Center Map on Hop"
+          >
+            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- Sequential Chronological Tower Trajectory Scrubber & Playback Console -->
+
+    <div class="bg-cyber-surface/80 border border-cyber-border rounded-2xl p-3.5 mt-3 shadow-xl backdrop-blur-md">
+
+      <!-- Playback Controls Bar -->
+
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-2.5 pb-2.5 border-b border-cyber-border/70">
+
+        <div class="flex items-center gap-2">
+
+          <!-- Play / Pause Button -->
+
+          <button
+            id="traj-play-btn"
+            onclick="toggleTrajectoryPlayback()"
+            class="px-3 py-1.5 bg-cyber-cyan/20 border border-cyber-cyan/50 rounded-lg text-xs font-bold text-cyber-cyan hover:bg-cyber-cyan/30 transition-all flex items-center gap-1.5 font-mono shadow-sm"
+          >
+            <i data-lucide="play" class="w-3.5 h-3.5 text-cyber-cyan"></i>
+            <span id="traj-play-label">Play Trajectory</span>
+          </button>
+
+
+          <!-- Prev / Next Navigation -->
+
+          <button
+            onclick="navigateTower(-1)"
+            class="p-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-slate-400 hover:text-white hover:border-cyber-cyan transition-all"
+            title="Previous Hop"
+          >
+            <i data-lucide="skip-back" class="w-3.5 h-3.5"></i>
+          </button>
+
+          <button
+            onclick="navigateTower(1)"
+            class="p-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-slate-400 hover:text-white hover:border-cyber-cyan transition-all"
+            title="Next Hop"
+          >
+            <i data-lucide="skip-forward" class="w-3.5 h-3.5"></i>
+          </button>
+
+
+          <!-- Speed Controls -->
+
+          <div class="flex items-center gap-0.5 bg-slate-950/90 border border-cyber-border rounded-lg p-0.5 ml-1 text-[10px] font-mono">
+
+            <span class="text-slate-500 px-1.5">
+              Speed:
+            </span>
+
+            <button
+              onclick="setPlaybackSpeed(0.5)"
+              data-speed="0.5"
+              class="playback-speed-btn px-2 py-0.5 rounded text-slate-400 hover:text-white transition-all"
+            >
+              0.5x
+            </button>
+
+            <button
+              onclick="setPlaybackSpeed(1.0)"
+              data-speed="1.0"
+              class="playback-speed-btn px-2 py-0.5 rounded text-cyber-cyan font-bold bg-cyber-cyan/20 border border-cyber-cyan/40"
+            >
+              1x
+            </button>
+
+            <button
+              onclick="setPlaybackSpeed(2.0)"
+              data-speed="2.0"
+              class="playback-speed-btn px-2 py-0.5 rounded text-slate-400 hover:text-white transition-all"
+            >
+              2x
+            </button>
+
+            <button
+              onclick="setPlaybackSpeed(4.0)"
+              data-speed="4.0"
+              class="playback-speed-btn px-2 py-0.5 rounded text-slate-400 hover:text-white transition-all"
+            >
+              4x
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- Counter & Selected Timestamp Display -->
+
+        <div class="flex items-center gap-2.5 text-xs font-mono">
+
+          <span
+            class="text-cyber-cyan font-bold text-xs"
+            id="traj-playback-status"
+          >
+            Hop #1
+          </span>
+
+          <span class="text-slate-600">
+            •
+          </span>
+
+          <span
+            class="text-slate-300 text-[11px]"
+            id="traj-playback-time"
+          >
+            --:--:--
+          </span>
+
+          <span
+            class="text-slate-500 text-[11px] hidden sm:inline"
+            id="trajectory-counter"
+          >
+            Select hop to inspect
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- Smooth Range Scrubbing Slider -->
+
+      <div class="mb-2.5 px-0.5">
+
+        <input
+          type="range"
+          id="traj-scrubber-slider"
+          min="0"
+          max="0"
+          value="0"
+          step="1"
+          oninput="onScrubberSliderInput(this.value)"
+          class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400 hover:accent-sky-300 transition-all focus:outline-none"
+        />
+
+      </div>
+
+
+      <!-- Chronological Hop Buttons Drawer -->
+
+      <div
+        id="chronological-drawer"
+        class="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin"
+      ></div>
+
+    </div>
+
+
+    <!-- No geo data notice -->
+
+    <div
+      id="no-geo-notice"
+      class="hidden p-3 bg-cyber-amber/10 border border-cyber-amber/30 rounded-lg text-xs text-cyber-amber flex items-center gap-2 mt-3"
+    >
+      <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+      No geo-coordinate data found in this CDR file. Map requires lat/lon or tower coordinate columns.
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- IMPOSSIBLE TRAVEL TABLE                                        -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  {% if data.impossible_travel %}
+
+  <div class="glass-card p-5">
+
+    <div class="flex items-center gap-3 mb-4">
+
+      <div class="beacon beacon-red"></div>
+
+      <h3 class="text-sm font-semibold text-cyber-rose">
+        <i data-lucide="zap" class="w-4 h-4 inline mr-1"></i>
+        Impossible Travel Anomalies ({{ data.impossible_travel | length }} events)
+      </h3>
+
+    </div>
+
+    <div class="overflow-x-auto">
+
+      <table class="w-full text-xs font-mono">
+
+        <thead>
+          <tr class="border-b border-cyber-border text-left">
+            <th class="pb-2 text-slate-500 pr-4">From</th>
+            <th class="pb-2 text-slate-500 pr-4">To</th>
+            <th class="pb-2 text-slate-500 pr-4">Distance</th>
+            <th class="pb-2 text-slate-500 pr-4">Time Δ</th>
+            <th class="pb-2 text-slate-500 pr-4">Speed</th>
+            <th class="pb-2 text-slate-500">Towers</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-cyber-border/50">
+
+          {% for event in data.impossible_travel[:20] %}
+
+          <tr class="hover:bg-cyber-rose/5 transition-colors">
+
+            <td class="py-2 pr-4 text-slate-300">
+              {{ event.from_ts[:16] }}
+            </td>
+
+            <td class="py-2 pr-4 text-slate-300">
+              {{ event.to_ts[:16] }}
+            </td>
+
+            <td class="py-2 pr-4 text-cyber-amber">
+              {{ event.distance_km }} km
+            </td>
+
+            <td class="py-2 pr-4 text-slate-400">
+              {{ event.time_diff_min }} min
+            </td>
+
+            <td class="py-2 pr-4">
+              <span class="px-2 py-0.5 bg-cyber-rose/20 text-cyber-rose rounded text-[10px]">
+                {{ event.speed_kmh | int }} km/h
+              </span>
+            </td>
+
+            <td class="py-2 text-slate-500">
+              {{ event.from_cell }} → {{ event.to_cell }}
+            </td>
+
+          </tr>
+
+          {% endfor %}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+  {% endif %}
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- DEVICE SWAP PANEL                                              -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  {% if data.device_swaps.handset_hopping or data.device_swaps.sim_swapping %}
+
+  <div class="glass-card p-5 border-cyber-amber/30 bg-cyber-amber/5">
+
+    <h3 class="text-sm font-semibold text-cyber-amber mb-4 flex items-center gap-2">
+      <i data-lucide="smartphone" class="w-4 h-4"></i>
+      Device &amp; SIM Intelligence
+    </h3>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+      <!-- IMEI Timeline -->
+
+      {% if data.device_swaps.imei_timeline %}
+
+      <div>
+
+        <h4 class="text-xs font-mono text-slate-400 uppercase mb-2">
+          IMEI / Handset Timeline ({{ data.device_swaps.imei_count }} devices)
+        </h4>
+
+        <div class="space-y-2">
+
+          {% for item in data.device_swaps.imei_timeline %}
+
+          <div class="bg-cyber-surface rounded-lg p-3 border border-cyber-border">
+
+            <p class="text-xs font-mono text-cyber-amber mb-1">
+              {{ item.imei }}
+            </p>
+
+            <p class="text-[10px] text-slate-500">
+              First: {{ item.first_seen[:16] if item.first_seen else "—" }}
+            </p>
+
+            <p class="text-[10px] text-slate-500">
+              Last: {{ item.last_seen[:16] if item.last_seen else "—" }}
+            </p>
+
+            <p class="text-[10px] text-slate-400 mt-1">
+              {{ item.call_count }} calls
+            </p>
+
+          </div>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+      {% endif %}
+
+
+      <!-- IMSI Timeline -->
+
+      {% if data.device_swaps.imsi_timeline %}
+
+      <div>
+
+        <h4 class="text-xs font-mono text-slate-400 uppercase mb-2">
+          IMSI / SIM Timeline ({{ data.device_swaps.imsi_count }} SIMs)
+        </h4>
+
+        <div class="space-y-2">
+
+          {% for item in data.device_swaps.imsi_timeline %}
+
+          <div class="bg-cyber-surface rounded-lg p-3 border border-cyber-border">
+
+            <p class="text-xs font-mono text-cyber-amber mb-1">
+              {{ item.imsi }}
+            </p>
+
+            <p class="text-[10px] text-slate-500">
+              First: {{ item.first_seen[:16] if item.first_seen else "—" }}
+            </p>
+
+            <p class="text-[10px] text-slate-500">
+              Last: {{ item.last_seen[:16] if item.last_seen else "—" }}
+            </p>
+
+            <p class="text-[10px] text-slate-400 mt-1">
+              {{ item.call_count }} calls
+            </p>
+
+          </div>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+      {% endif %}
+
+    </div>
+
+  </div>
+
+  {% endif %}
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- BURST EVENTS                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  {% if data.bursts %}
+
+  <div class="glass-card p-5">
+
+    <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+      <i data-lucide="radio" class="w-4 h-4 text-cyber-rose"></i>
+      Call Burst Events ({{ data.bursts | length }} detected)
+    </h3>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+      {% for burst in data.bursts[:9] %}
+
+      <div class="bg-cyber-surface border border-cyber-border rounded-lg p-3 border-l-2 border-l-cyber-rose">
+
+        <p class="text-xs font-mono text-cyber-rose font-bold">
+          {{ burst.count }} calls / {{ burst.window_minutes }}min
+        </p>
+
+        <p class="text-[10px] text-slate-500 mt-1">
+          From: {{ burst.start[:16] }}
+        </p>
+
+        <p class="text-[10px] text-slate-500">
+          To: {{ burst.end[:16] }}
+        </p>
+
+      </div>
+
+      {% endfor %}
+
+    </div>
+
+  </div>
+
+  {% endif %}
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CDR DATA GRID (DataTables)                                     -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="glass-card p-5">
+
+    <div class="flex items-center justify-between mb-4">
+
+      <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+
+        <i data-lucide="table" class="w-4 h-4 text-cyber-cyan"></i>
+
+        Forensic CDR Log
+
+        <span class="px-2 py-0.5 bg-cyber-cyan/20 text-cyber-cyan text-[10px] font-mono rounded">
+          {{ data.kpis.total_records }} total
+        </span>
+
+      </h3>
+
+    </div>
+
+    <div class="overflow-x-auto">
+
+      <table
+        id="cdr-table"
+        class="w-full cdr-datatable"
+        style="width:100%"
+      >
+
+        <thead>
+
+          <tr>
+            <th>Timestamp</th>
+            <th>Caller</th>
+            <th>Receiver</th>
+            <th>Type</th>
+            <th>Duration (s)</th>
+            <th>Cell ID</th>
+            <th>IMEI</th>
+          </tr>
+
+        </thead>
+
+        <tbody id="cdr-table-body"></tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- INVESTIGATION ANALYTICS — COMPACT ACCESS                       -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+
+<div class="flex justify-end pt-1 pb-2">
+
+  <a
+    href="{{ url_for('investigation_analytics_view', session_id=session_id) }}"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="group inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-cyber-cyan/40 bg-cyber-cyan/10 hover:bg-cyber-cyan/20 hover:border-cyber-cyan/70 text-cyber-cyan font-semibold text-xs font-mono transition-all duration-200"
+  >
+    <i data-lucide="scan-search" class="w-4 h-4"></i>
+
+    Open Investigation Analytics
+
+    <i
+      data-lucide="arrow-up-right"
+      class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+    ></i>
+
+  </a>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+
+<script>
+
+const SESSION_ID = "{{ session_id }}";
+
+// ── Chart.js Instances ────────────────────────────────────────────────────
+
+let hourlyChart;
+let dowChart;
+let callTypeChart;
+let contactChart;
+
+let networkGraph;
+let leafletMap;
+let physicsEnabled = true;
+
+
+// ── Export Menu Toggle ───────────────────────────────────────────────────
+
+function toggleExportMenu() {
+  const menu = document.getElementById('export-menu');
+
+  if (menu) {
+    menu.classList.toggle('hidden');
+  }
+}
+
+function closeExportMenu() {
+  const menu = document.getElementById('export-menu');
+
+  if (menu) {
+    menu.classList.add('hidden');
+  }
+}
+
+function handleExportClick(event, label) {
+  closeExportMenu();
+  showExportToast(`Downloading ${label}...`);
+}
+
+function showExportToast(msg) {
+
+  let toast = document.getElementById('export-toast');
+
+  if (!toast) {
+
+    toast = document.createElement('div');
+
+    toast.id = 'export-toast';
+
+    toast.className =
+      'fixed bottom-6 right-6 z-50 px-4 py-3 bg-slate-900/95 border border-cyber-cyan/50 text-white rounded-xl shadow-2xl flex items-center gap-3 font-mono text-xs backdrop-blur transition-all duration-300 transform translate-y-10 opacity-0';
+
+    document.body.appendChild(toast);
+  }
+
+  toast.innerHTML =
+    `<span class="w-2.5 h-2.5 rounded-full bg-cyber-emerald animate-ping"></span><span>${msg}</span>`;
+
+  toast.classList.remove('translate-y-10', 'opacity-0');
+
+  setTimeout(() => {
+    toast.classList.add('translate-y-10', 'opacity-0');
+  }, 3500);
+}
+
+
+window.addEventListener('click', function(e) {
+
+  const wrapper = document.getElementById('export-dropdown-wrapper');
+  const menu = document.getElementById('export-menu');
+
+  if (wrapper && menu && !wrapper.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+
+});
+
+
+// ── Color helpers ─────────────────────────────────────────────────────────
+
+function hourlyColor(hour) {
+
+  if (hour >= 0 && hour <= 4) {
+    return 'rgba(129, 140, 248, 0.7)';
+  }
+
+  if (hour >= 22) {
+    return 'rgba(245, 158, 11, 0.7)';
+  }
+
+  return 'rgba(56, 189, 248, 0.7)';
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// LOAD ALL DATA
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadAll() {
+
+  await Promise.all([
+    loadHourly(),
+    loadDow(),
+    loadCallTypes(),
+    loadContacts(),
+    loadGraph(),
+    loadGeo(),
+    loadRecords(),
+  ]);
+
+}
+
+
+// ── Hourly Chart ──────────────────────────────────────────────────────────
+
+async function loadHourly() {
+
+  const res = await fetch(`/api/hourly/${SESSION_ID}`);
+  const data = await res.json();
+
+  const labels = data.map(
+    d => `${String(d.hour).padStart(2, '0')}:00`
+  );
+
+  const counts = data.map(d => d.count);
+  const colors = data.map(d => hourlyColor(d.hour));
+
+  const ctx = document
+    .getElementById('chart-hourly')
+    .getContext('2d');
+
+  hourlyChart = new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+      labels,
+
+      datasets: [
+        {
+          label: 'Calls',
+          data: counts,
+          backgroundColor: colors,
+          borderColor: colors.map(
+            c => c.replace('0.7)', '1)')
+          ),
+          borderWidth: 1,
+          borderRadius: 3,
+        }
+      ]
+    },
+
+    options: {
+
+      responsive: true,
+      maintainAspectRatio: false,
+
+      plugins: {
+
+        legend: {
+          display: false
+        },
+
+        tooltip: {
+
+          callbacks: {
+
+            title: ctx =>
+              `Hour: ${ctx[0].label}`,
+
+            label: ctx =>
+              ` Calls: ${ctx.raw}`,
+
+          }
+
+        }
+
+      },
+
+      scales: {
+
+        x: {
+          grid: {
+            color: '#1e293b'
+          },
+
+          ticks: {
+            maxRotation: 0,
+            font: {
+              size: 9
+            }
+          }
+        },
+
+        y: {
+          grid: {
+            color: '#1e293b'
+          },
+
+          beginAtZero: true,
+
+          ticks: {
+            precision: 0
+          }
+        },
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── DOW Radar ─────────────────────────────────────────────────────────────
+
+async function loadDow() {
+
+  const res = await fetch(`/api/dow/${SESSION_ID}`);
+  const data = await res.json();
+
+  const labels = data.map(
+    d => d.day.substring(0, 3)
+  );
+
+  const counts = data.map(d => d.count);
+
+  const ctx = document
+    .getElementById('chart-dow')
+    .getContext('2d');
+
+  dowChart = new Chart(ctx, {
+
+    type: 'radar',
+
+    data: {
+
+      labels,
+
+      datasets: [
+        {
+          label: 'Calls',
+          data: counts,
+          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+          borderColor: '#10b981',
+          borderWidth: 2,
+          pointBackgroundColor: '#10b981',
+          pointRadius: 4,
+        }
+      ]
+
+    },
+
+    options: {
+
+      responsive: true,
+      maintainAspectRatio: false,
+
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+
+      scales: {
+
+        r: {
+
+          grid: {
+            color: '#1e293b'
+          },
+
+          angleLines: {
+            color: '#1e293b'
+          },
+
+          ticks: {
+            color: '#64748b',
+            backdropColor: 'transparent',
+            font: {
+              size: 9
+            }
+          },
+
+          pointLabels: {
+            color: '#94a3b8',
+            font: {
+              size: 10
+            }
+          },
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── Call Types Donut ─────────────────────────────────────────────────────
+
+async function loadCallTypes() {
+
+  const res = await fetch(`/api/calltypes/${SESSION_ID}`);
+  const data = await res.json();
+
+  const colorMap = {
+
+    OUTGOING: '#38bdf8',
+    INCOMING: '#10b981',
+    SMS: '#f59e0b',
+    ROAMING: '#818cf8',
+    UNKNOWN: '#64748b'
+
+  };
+
+  const ctx = document
+    .getElementById('chart-calltypes')
+    .getContext('2d');
+
+  callTypeChart = new Chart(ctx, {
+
+    type: 'doughnut',
+
+    data: {
+
+      labels: data.map(d => d.type),
+
+      datasets: [
+        {
+          data: data.map(d => d.count),
+
+          backgroundColor:
+            data.map(
+              d => colorMap[d.type] || '#64748b'
+            ),
+
+          borderColor: '#0f172a',
+          borderWidth: 2,
+          hoverOffset: 6,
+        }
+      ]
+
+    },
+
+    options: {
+
+      responsive: true,
+      maintainAspectRatio: false,
+
+      plugins: {
+
+        legend: {
+
+          position: 'bottom',
+
+          labels: {
+            padding: 10,
+            font: {
+              size: 10
+            }
+          }
+
+        },
+
+        tooltip: {
+
+          callbacks: {
+
+            label: ctx =>
+              ` ${ctx.label}: ${ctx.raw}`
+
+          }
+
+        }
+
+      },
+
+      cutout: '60%',
+
+    }
+
+  });
+
+}
+
+
+// ── Top Contacts Bar ─────────────────────────────────────────────────────
+
+async function loadContacts() {
+
+  const res = await fetch(`/api/top-contacts/${SESSION_ID}`);
+  const data = await res.json();
+
+  const top10 = data.slice(0, 10);
+
+  const ctx = document
+    .getElementById('chart-contacts')
+    .getContext('2d');
+
+  contactChart = new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+
+      labels: top10.map(d => d.contact),
+
+      datasets: [
+        {
+          label: 'Call Count',
+
+          data: top10.map(d => d.call_count),
+
+          backgroundColor: 'rgba(245, 158, 11, 0.6)',
+
+          borderColor: '#f59e0b',
+
+          borderWidth: 1,
+
+          borderRadius: 4,
+        }
+      ]
+
+    },
+
+    options: {
+
+      indexAxis: 'y',
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+
+      scales: {
+
+        x: {
+
+          grid: {
+            color: '#1e293b'
+          },
+
+          ticks: {
+            precision: 0
+          }
+
+        },
+
+        y: {
+
+          grid: {
+            display: false
+          },
+
+          ticks: {
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+          }
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// LINK ANALYSIS (Vis.js Network Graph)
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadGraph() {
+
+  try {
+
+    const res = await fetch(`/api/graph/${SESSION_ID}`);
+    const graphData = await res.json();
+
+    const container =
+      document.getElementById('network-graph');
+
+    if (!container) {
+      return;
+    }
+
+
+    if (!graphData.nodes || graphData.nodes.length === 0) {
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full text-slate-500 py-12">
+
+          <div class="w-12 h-12 rounded-full bg-cyber-surface border border-cyber-border flex items-center justify-center mb-3">
+            <i data-lucide="git-fork" class="w-6 h-6 text-slate-400"></i>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-300">
+            No Network Links Identified
+          </p>
+
+          <p class="text-xs text-slate-500 mt-1">
+            Single-party records or insufficient caller/receiver linkages.
+          </p>
+
+        </div>
+      `;
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      return;
+    }
+
+
+    const data = {
+
+      nodes:
+        new vis.DataSet(graphData.nodes),
+
+      edges:
+        new vis.DataSet(graphData.edges)
+
+    };
+
+
+    const options = {
+
+      nodes: {
+
+        shape: 'dot',
+
+        font: {
+          color: '#f1f5f9',
+          size: 11,
+          face: 'Inter, sans-serif'
+        },
+
+        borderWidth: 2,
+
+        shadow: {
+          enabled: true,
+          color: 'rgba(0,0,0,0.5)',
+          size: 8
+        }
+
+      },
+
+
+      edges: {
+
+        color: {
+          color: '#334155',
+          highlight: '#38bdf8',
+          hover: '#38bdf8'
+        },
+
+        arrows: {
+          to: {
+            enabled: true,
+            scaleFactor: 0.7
+          }
+        },
+
+        smooth: {
+          type: 'continuous'
+        }
+
+      },
+
+
+      physics: {
+
+        enabled: true,
+
+        barnesHut: {
+
+          gravitationalConstant: -3500,
+
+          centralGravity: 0.3,
+
+          springLength: 95,
+
+          springConstant: 0.04,
+
+          damping: 0.09
+
+        },
+
+        stabilization: {
+          iterations: 150
+        }
+
+      },
+
+
+      interaction: {
+
+        hover: true,
+
+        tooltipDelay: 100,
+
+        navigationButtons: false,
+
+        keyboard: false
+
+      }
+
+    };
+
+
+    networkGraph =
+      new vis.Network(
+        container,
+        data,
+        options
+      );
+
+
+    networkGraph.once(
+      'stabilizationIterationsDone',
+      function() {
+
+        networkGraph.fit({
+          animation: {
+            duration: 400,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+
+      }
+    );
+
+
+    networkGraph.on(
+      'click',
+      function(params) {
+
+        if (params.nodes.length > 0) {
+
+          const nodeId =
+            params.nodes[0];
+
+          const node =
+            graphData.nodes.find(
+              n => n.id === nodeId
+            );
+
+          if (node) {
+            showNodeInspector(node);
+          }
+
+        }
+
+      }
+    );
+
+
+  } catch (err) {
+
+    console.error(
+      'Failed to load network graph:',
+      err
+    );
+
+  }
+
+}
+
+
+function showNodeInspector(node) {
+
+  const inspector =
+    document.getElementById('node-inspector');
+
+  const content =
+    document.getElementById('node-inspector-content');
+
+  if (!inspector || !content) {
+    return;
+  }
+
+
+  content.innerHTML = `
+
+    <div class="bg-cyber-surface p-2.5 rounded-lg border border-cyber-border">
+
+      <span class="text-[10px] text-slate-500 uppercase block">
+        Phone / Contact
+      </span>
+
+      <span class="text-xs font-mono font-bold text-cyber-cyan">
+        ${node.id}
+      </span>
+
+    </div>
+
+
+    <div class="bg-cyber-surface p-2.5 rounded-lg border border-cyber-border">
+
+      <span class="text-[10px] text-slate-500 uppercase block">
+        Role
+      </span>
+
+      <span class="text-xs font-mono font-bold ${node.is_target ? 'text-cyber-rose' : 'text-slate-300'}">
+        ${node.is_target ? 'Target MSISDN' : 'Contact Node'}
+      </span>
+
+    </div>
+
+
+    <div class="bg-cyber-surface p-2.5 rounded-lg border border-cyber-border">
+
+      <span class="text-[10px] text-slate-500 uppercase block">
+        Degree (Calls)
+      </span>
+
+      <span class="text-xs font-mono font-bold text-cyber-emerald">
+        ${node.degree || node.value || 0}
+      </span>
+
+    </div>
+
+
+    <div class="bg-cyber-surface p-2.5 rounded-lg border border-cyber-border">
+
+      <span class="text-[10px] text-slate-500 uppercase block">
+        Degree Centrality
+      </span>
+
+      <span class="text-xs font-mono font-bold text-cyber-amber">
+        ${node.centrality || 0}
+      </span>
+
+    </div>
+
+  `;
+
+  inspector.classList.remove('hidden');
+
+  lucide.createIcons();
+
+}
+
+
+function resetGraph() {
+
+  if (networkGraph) {
+
+    networkGraph.fit({
+      animation: {
+        duration: 600,
+        easingFunction: 'easeInOutQuad'
+      }
+    });
+
+  }
+
+}
+
+
+function fitGraph() {
+
+  if (networkGraph) {
+
+    networkGraph.fit({
+      animation: {
+        duration: 600,
+        easingFunction: 'easeInOutQuad'
+      }
+    });
+
+  }
+
+}
+
+
+function togglePhysics() {
+
+  if (!networkGraph) {
+    return;
+  }
+
+  physicsEnabled = !physicsEnabled;
+
+  networkGraph.setOptions({
+    physics: {
+      enabled: physicsEnabled
+    }
+  });
+
+  const btn =
+    document.getElementById('physics-btn');
+
+  if (btn) {
+
+    btn.classList.toggle(
+      'text-cyber-cyan',
+      physicsEnabled
+    );
+
+    btn.classList.toggle(
+      'border-cyber-cyan',
+      physicsEnabled
+    );
+
+  }
+
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// MULTI-LAYER TACTICAL GIS MAP & TRAJECTORY VECTOR ENGINE
+// ══════════════════════════════════════════════════════════════════════════
+
+let currentMarkers = [];
+let currentTrajectory = [];
+let currentHopIndex = 0;
+let proximityCircle = null;
+let activePulseMarker = null;
+let currentSelectedHop = null;
+let geoCenter = [20.5937, 78.9629];
+
+
+// Trajectory Playback Engine State
+
+let isPlaybackRunning = false;
+let playbackTimer = null;
+let playbackSpeed = 1.0;
+let isClusterMode = true;
+
+
+// Helper to create smooth marker cluster or flat layer group
+
+function createClusterOrLayerGroup(accentColor) {
+
+  if (typeof L.markerClusterGroup === 'function') {
+
+    return L.markerClusterGroup({
+
+      chunkedLoading: true,
+
+      chunkInterval: 50,
+
+      chunkDelay: 10,
+
+      maxClusterRadius: 35,
+
+      spiderfyOnMaxZoom: true,
+
+      showCoverageOnHover: false,
+
+      zoomToBoundsOnClick: true,
+
+      disableClusteringAtZoom: 15,
+
+      animate: true,
+
+      animateAddingMarkers: false,
+
+      iconCreateFunction: (cluster) => {
+
+        const count =
+          cluster.getChildCount();
+
+        const size =
+          count < 10
+            ? 26
+            : (count < 50 ? 32 : 38);
+
+        return L.divIcon({
+
+          html:
+            `<div style="background:${accentColor}; width:${size}px; height:${size}px; border-radius:50%; border:2px solid #090d16; display:flex; align-items:center; justify-content:center; color:#fff; font-family:monospace; font-size:10px; font-weight:bold; box-shadow:0 0 10px ${accentColor}aa;">${count}</div>`,
+
+          className:
+            'custom-cluster-marker',
+
+          iconSize: [
+            size,
+            size
+          ],
+
+          iconAnchor: [
+            size / 2,
+            size / 2
+          ]
+
+        });
+
+      }
+
+    });
+
+  }
+
+  return L.layerGroup();
+
+}
+
+
+// Layer references
+
+let baseLayers = {};
+let overlayLayers = {};
+let layerControl = null;
+
+let darkTacticalLayer = null;
+let standardStreetLayer = null;
+let satelliteLayer = null;
+let openTopoLayer = null;
+
+let trajectoryLayerGroup = null;
+let heatLayer = null;
+let nightCallsLayer = null;
+let dayCallsLayer = null;
+
+
+// Zero-Key Public Telemetry Overlays
+
+let submarineCablesLayer = null;
+let earthquakeLayer = null;
+let radarLayer = null;
+let terminatorLayer = null;
+let adsbLayer = null;
+let currentGeoData = null;
+
+
+async function loadGeo() {
+
+  try {
+
+    const res =
+      await fetch(`/api/geo/${SESSION_ID}`);
+
+    const geo =
+      await res.json();
+
+    currentGeoData = geo;
+
+
+    if (
+      !geo.has_geo ||
+      !geo.markers ||
+      geo.markers.length === 0
+    ) {
+
+      document
+        .getElementById('no-geo-notice')
+        .classList.remove('hidden');
+
+      document
+        .getElementById('map-container')
+        .style.display = 'none';
+
+      return;
+
+    }
+
+
+    currentMarkers =
+      geo.markers;
+
+    currentTrajectory =
+      geo.trajectory || geo.markers;
+
+    geoCenter =
+      geo.center ||
+      [
+        geo.markers[0].lat,
+        geo.markers[0].lon
+      ];
+
+
+    const statsBadge =
+      document.getElementById(
+        'gis-stats-badge'
+      );
+
+    if (statsBadge) {
+
+      statsBadge.textContent =
+        `${geo.markers.length} Hops Plotted • ${geo.towers ? geo.towers.length : 0} Unique Towers`;
+
+    }
+
+
+    // Initialize Leaflet Map
+
+    leafletMap = L.map(
+      'cdr-map',
+      {
+
+        center: geoCenter,
+
+        zoom: 12,
+
+        zoomControl: false,
+
+        maxZoom: 20,
+
+        preferCanvas: true,
+
+        zoomSnap: 0.25,
+
+        zoomDelta: 0.5,
+
+        wheelPxPerZoomLevel: 120,
+
+        wheelDebounceTime: 40,
+
+        fadeAnimation: true,
+
+        zoomAnimation: true,
+
+        markerZoomAnimation: true,
+
+        inertia: true,
+
+        inertiaDeceleration: 2500,
+
+        inertiaMaxSpeed: 1400,
+
+        easeLinearity: 0.2
+
+      }
+    );
+
+
+    // Sleek bottom-right zoom controls
+
+    L.control
+      .zoom({
+        position: 'bottomright'
+      })
+      .addTo(leafletMap);
+
+
+    // ── 1. BASE LAYERS ──────────────────────────────────────────────
+
+    darkTacticalLayer =
+      L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        {
+
+          maxZoom: 20,
+
+          subdomains: 'abcd',
+
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+
+          updateWhenZooming: false,
+
+          updateWhenIdle: true,
+
+          keepBuffer: 6
+
+        }
+      );
+
+
+    // Standard Street & City Map
+
+    standardStreetLayer =
+      L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        {
+
+          maxZoom: 20,
+
+          subdomains: 'abcd',
+
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+
+          updateWhenZooming: false,
+
+          updateWhenIdle: true,
+
+          keepBuffer: 6
+
+        }
+      );
+
+
+    // Satellite / Aerial Imagery
+
+    satelliteLayer =
+      L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        {
+
+          maxZoom: 19,
+
+          attribution:
+            'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community',
+
+          updateWhenZooming: false,
+
+          updateWhenIdle: true,
+
+          keepBuffer: 6
+
+        }
+      );
+
+
+    // Topographic / Terrain
+
+    openTopoLayer =
+      L.tileLayer(
+        'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        {
+
+          maxZoom: 17,
+
+          attribution:
+            'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)',
+
+          updateWhenZooming: false,
+
+          updateWhenIdle: true,
+
+          keepBuffer: 6
+
+        }
+      );
+
+
+    // Add default Dark Tactical basemap
+
+    darkTacticalLayer.addTo(leafletMap);
+
+
+    baseLayers = {
+
+      "<span class='text-sky-300 font-bold'>🕶️ Dark Tactical Basemap</span>":
+        darkTacticalLayer,
+
+      "<span>🗺️ Standard Street Map</span>":
+        standardStreetLayer,
+
+      "<span>🛰️ Satellite / Aerial Imagery</span>":
+        satelliteLayer,
+
+      "<span>🏔️ Topographic / Terrain</span>":
+        openTopoLayer
+
+    };
+
+
+    // ── 2. OPERATIONAL FORENSIC OVERLAYS ──────────────────────────
+
+    trajectoryLayerGroup =
+      L.layerGroup();
+
+    buildTrajectoryVectors(
+      geo,
+      trajectoryLayerGroup
+    );
+
+    trajectoryLayerGroup.addTo(
+      leafletMap
+    );
+
+
+    // Cell Tower Dwell-Time Heatmap
+
+    const heatData =
+      geo.heat_points ||
+      geo.heatmap ||
+      [];
+
+    if (
+      heatData.length > 0 &&
+      typeof L.heatLayer === 'function'
+    ) {
+
+      heatLayer =
+        L.heatLayer(
+          heatData,
+          {
+
+            radius: 35,
+
+            blur: 22,
+
+            maxZoom: 16,
+
+            gradient: {
+
+              0.15: '#06b6d4',
+
+              0.40: '#10b981',
+
+              0.70: '#f59e0b',
+
+              1.00: '#f43f5e'
+
+            }
+
+          }
+        );
+
+    } else {
+
+      heatLayer =
+        L.layerGroup();
+
+    }
+
+
+    // Night / Day Calls
+
+    nightCallsLayer =
+      createClusterOrLayerGroup(
+        'rgba(244, 63, 94, 0.9)'
+      );
+
+    dayCallsLayer =
+      createClusterOrLayerGroup(
+        'rgba(56, 189, 248, 0.9)'
+      );
+
+    buildDayNightLayers(
+      geo.markers,
+      nightCallsLayer,
+      dayCallsLayer
+    );
+
+    nightCallsLayer.addTo(
+      leafletMap
+    );
+
+    dayCallsLayer.addTo(
+      leafletMap
+    );
+
+
+    // ── 3. ZERO-KEY PUBLIC TELEMETRY OVERLAYS ─────────────────────
+
+    radarLayer =
+      L.layerGroup();
+
+
+    submarineCablesLayer =
+      L.geoJSON(
+        null,
+        {
+
+          style: {
+            color: '#06b6d4',
+            weight: 1.8,
+            opacity: 0.85
+          },
+
+          onEachFeature:
+            (feature, l) => {
+
+              const name =
+                feature.properties
+                  ? (
+                      feature.properties.name ||
+                      feature.properties.id ||
+                      'Submarine Cable'
+                    )
+                  : 'Submarine Cable';
+
+              l.bindPopup(
+                `
+                  <div style="font-family:monospace;font-size:11px;color:#f1f5f9;background:#0f172a;padding:6px;border-radius:4px;">
+
+                    <div style="color:#06b6d4;font-weight:bold;margin-bottom:3px;">
+                      🌐 SUBMARINE FIBER CABLE
+                    </div>
+
+                    <div>${name}</div>
+
+                    <div style="color:#94a3b8;font-size:10px;margin-top:4px;">
+                      Source: TeleGeography Open Infrastructure Feed
+                    </div>
+
+                  </div>
+                `,
+                {
+                  className: 'dark-popup'
+                }
+              );
+
+            }
+
+        }
+      );
+
+
+    earthquakeLayer =
+      L.geoJSON(
+        null,
+        {
+
+          pointToLayer:
+            (feature, latlng) => {
+
+              const mag =
+                feature.properties &&
+                feature.properties.mag
+                  ? feature.properties.mag
+                  : 4.5;
+
+              const radius =
+                Math.max(
+                  5,
+                  Math.min(
+                    22,
+                    (mag - 3) * 4.5
+                  )
+                );
+
+              const color =
+                mag >= 6.5
+                  ? '#ef4444'
+                  : (
+                      mag >= 5.5
+                        ? '#f97316'
+                        : '#eab308'
+                    );
+
+              return L.circleMarker(
+                latlng,
+                {
+
+                  radius,
+
+                  fillColor: color,
+
+                  color: '#ffffff',
+
+                  weight: 1.5,
+
+                  opacity: 0.9,
+
+                  fillOpacity: 0.7
+
+                }
+              );
+
+            },
+
+
+          onEachFeature:
+            (feature, l) => {
+
+              const p =
+                feature.properties || {};
+
+              const timeStr =
+                p.time
+                  ? new Date(p.time).toUTCString()
+                  : 'N/A';
+
+              l.bindPopup(
+                `
+                  <div style="font-family:monospace;font-size:11px;color:#f1f5f9;background:#0f172a;padding:6px;border-radius:4px;min-width:180px;">
+
+                    <div style="color:#ef4444;font-weight:bold;margin-bottom:3px;">
+                      ⚡ SEISMIC TELEMETRY (USGS)
+                    </div>
+
+                    <div>
+                      Location:
+                      <b>${p.place || 'Unknown'}</b>
+                    </div>
+
+                    <div>
+                      Magnitude:
+                      <b style="color:#f97316;">
+                        M ${p.mag || 'N/A'}
+                      </b>
+                    </div>
+
+                    <div>
+                      Time:
+                      <span style="color:#94a3b8;">
+                        ${timeStr}
+                      </span>
+                    </div>
+
+                    <div style="margin-top:4px;">
+                      <a
+                        href="${p.url || '#'}"
+                        target="_blank"
+                        style="color:#38bdf8;text-decoration:underline;"
+                      >
+                        USGS Event Report &rarr;
+                      </a>
+                    </div>
+
+                  </div>
+                `,
+                {
+                  className: 'dark-popup'
+                }
+              );
+
+            }
+
+        }
+      );
+
+
+    terminatorLayer =
+      createTerminatorLayer();
+
+    adsbLayer =
+      L.layerGroup();
+
+
+    // Trigger non-blocking async population
+
+    initAsyncTelemetry(
+      radarLayer,
+      submarineCablesLayer,
+      earthquakeLayer,
+      adsbLayer,
+      geoCenter
+    );
+
+
+    overlayLayers = {
+
+      "<span class='text-sky-300 font-bold'>📐 Sequential Vector Trajectory</span>":
+        trajectoryLayerGroup,
+
+      "<span class='text-rose-400'>🔥 Cell Tower Dwell Heatmap</span>":
+        heatLayer,
+
+      "<span class='text-red-400'>🌙 Night-Owl Calls (00:00–05:00)</span>":
+        nightCallsLayer,
+
+      "<span class='text-emerald-400'>☀️ Daytime Calls</span>":
+        dayCallsLayer,
+
+      "<span class='text-cyan-300'>🌊 Submarine Fiber Cables (TeleGeography)</span>":
+        submarineCablesLayer,
+
+      "<span class='text-amber-300'>💥 Seismic Activity M4.5+ (USGS)</span>":
+        earthquakeLayer,
+
+      "<span class='text-cyan-400'>🌧️ Live Weather Radar (RainViewer)</span>":
+        radarLayer,
+
+      "<span class='text-blue-300'>☀️ Solar Day/Night Terminator</span>":
+        terminatorLayer,
+
+      "<span class='text-emerald-300'>✈️ Live Air Traffic (OpenSky ADS-B)</span>":
+        adsbLayer
+
+    };
+
+
+    // ── 4. FLOATING TACTICAL LAYER CONTROL ────────────────────────
+
+    layerControl =
+      L.control.layers(
+        baseLayers,
+        overlayLayers,
+        {
+          position: 'topright',
+          collapsed: false
+        }
+      ).addTo(leafletMap);
+
+
+    // Sync button states
+
+    leafletMap.on(
+      'baselayerchange',
+      (e) => {
+
+        const isSat =
+          e.layer === satelliteLayer;
+
+        const satBtn =
+          document.getElementById(
+            'quick-satellite-btn'
+          );
+
+        if (satBtn) {
+
+          satBtn.classList.toggle(
+            'border-cyber-cyan',
+            isSat
+          );
+
+          satBtn.classList.toggle(
+            'bg-cyber-cyan/20',
+            isSat
+          );
+
+          satBtn.classList.toggle(
+            'text-cyber-cyan',
+            isSat
+          );
+
+        }
+
+      }
+    );
+
+
+    leafletMap.on(
+      'overlayadd',
+      (e) =>
+        syncQuickToggleBadge(
+          e.layer,
+          true
+        )
+    );
+
+
+    leafletMap.on(
+      'overlayremove',
+      (e) =>
+        syncQuickToggleBadge(
+          e.layer,
+          false
+        )
+    );
+
+
+    // Populate Chronological Scrubber
+
+    populateChronologicalScrubber(
+      currentMarkers
+    );
+
+
+    // Auto-select first hop
+
+    if (currentMarkers.length > 0) {
+
+      inspectHop(
+        currentMarkers[0],
+        0
+      );
+
+    }
+
+  } catch (err) {
+
+    console.error(
+      'Failed to load GIS data:',
+      err
+    );
+
+  }
+
+}
+
+
+// ── ZERO-KEY TELEMETRY BUILDERS ─────────────────────────────────────────
+
+function initAsyncTelemetry(
+  radarGroup,
+  cablesGroup,
+  quakesGroup,
+  adsbGroup,
+  mapCenter
+) {
+
+  setTimeout(
+    async () => {
+
+      try {
+
+        const res =
+          await fetch(
+            '/api/osint/rainviewer'
+          );
+
+        const data =
+          await res.json();
+
+        let latestPath =
+          'nowcast_latest';
+
+        if (
+          data &&
+          data.radar &&
+          data.radar.past &&
+          data.radar.past.length > 0
+        ) {
+
+          latestPath =
+            data.radar.past[
+              data.radar.past.length - 1
+            ].path;
+
+        }
+
+        const radarTile =
+          L.tileLayer(
+            `https://tilecache.rainviewer.com/v2/radar/${latestPath}/256/{z}/{x}/{y}/2/1_1.png`,
+            {
+
+              opacity: 0.65,
+
+              maxZoom: 18,
+
+              attribution:
+                '© RainViewer Weather Radar'
+
+            }
+          );
+
+        radarGroup.addLayer(
+          radarTile
+        );
+
+      } catch (e) {
+
+        console.warn(
+          'RainViewer async load failed:',
+          e
+        );
+
+      }
+
+    },
+    100
+  );
+
+
+  setTimeout(
+    async () => {
+
+      try {
+
+        const res =
+          await fetch(
+            '/api/osint/submarine-cables'
+          );
+
+        if (res.ok) {
+
+          const data =
+            await res.json();
+
+          cablesGroup.addData(
+            data
+          );
+
+        }
+
+      } catch (e) {
+
+        console.warn(
+          'Submarine cables async load failed:',
+          e
+        );
+
+      }
+
+    },
+    150
+  );
+
+
+  setTimeout(
+    async () => {
+
+      try {
+
+        const res =
+          await fetch(
+            '/api/osint/earthquakes'
+          );
+
+        if (res.ok) {
+
+          const data =
+            await res.json();
+
+          quakesGroup.addData(
+            data
+          );
+
+        }
+
+      } catch (e) {
+
+        console.warn(
+          'Earthquakes async load failed:',
+          e
+        );
+
+      }
+
+    },
+    200
+  );
+
+
+  setTimeout(
+    async () => {
+
+      try {
+
+        const lat =
+          mapCenter
+            ? mapCenter[0]
+            : 20.0;
+
+        const lon =
+          mapCenter
+            ? mapCenter[1]
+            : 78.0;
+
+        const lamin =
+          (lat - 3.0).toFixed(2);
+
+        const lamax =
+          (lat + 3.0).toFixed(2);
+
+        const lomin =
+          (lon - 3.0).toFixed(2);
+
+        const lomax =
+          (lon + 3.0).toFixed(2);
+
+
+        const res =
+          await fetch(
+            `/api/osint/opensky?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`
+          );
+
+
+        if (res.ok) {
+
+          const data =
+            await res.json();
+
+
+          if (
+            data &&
+            data.states
+          ) {
+
+            data.states.forEach(
+              st => {
+
+                const icao =
+                  st[0];
+
+                const callsign =
+                  (st[1] || '').trim() ||
+                  icao;
+
+                const country =
+                  st[2];
+
+                const sLon =
+                  st[5];
+
+                const sLat =
+                  st[6];
+
+                const alt =
+                  st[7];
+
+                const onGround =
+                  st[8];
+
+                const vel =
+                  st[9];
+
+                const heading =
+                  st[10] || 0;
+
+
+                if (
+                  sLat !== null &&
+                  sLon !== null &&
+                  !onGround
+                ) {
+
+                  const planeIcon =
+                    L.divIcon({
+
+                      className:
+                        'plane-marker',
+
+                      html:
+                        `<div style="transform: rotate(${heading}deg); font-size: 15px; line-height: 1; filter: drop-shadow(0 0 4px #10b981);">✈️</div>`,
+
+                      iconSize: [
+                        20,
+                        20
+                      ],
+
+                      iconAnchor: [
+                        10,
+                        10
+                      ]
+
+                    });
+
+
+                  const m =
+                    L.marker(
+                      [sLat, sLon],
+                      {
+                        icon: planeIcon
+                      }
+                    );
+
+
+                  m.bindPopup(
+                    `
+                      <div style="font-family:monospace;font-size:11px;color:#f1f5f9;background:#0f172a;padding:6px;border-radius:4px;">
+
+                        <div style="color:#10b981;font-weight:bold;margin-bottom:3px;">
+                          ✈️ ADS-B FLIGHT: ${callsign}
+                        </div>
+
+                        <div>
+                          ICAO24:
+                          <b>${icao}</b>
+                        </div>
+
+                        <div>
+                          Country:
+                          ${country}
+                        </div>
+
+                        <div>
+                          Altitude:
+                          ${alt ? Math.round(alt) + ' m' : 'N/A'}
+                        </div>
+
+                        <div>
+                          Velocity:
+                          ${vel ? Math.round(vel * 3.6) + ' km/h' : 'N/A'}
+                        </div>
+
+                        <div>
+                          Heading:
+                          ${heading ? Math.round(heading) + '°' : 'N/A'}
+                        </div>
+
+                      </div>
+                    `,
+                    {
+                      className: 'dark-popup'
+                    }
+                  );
+
+
+                  adsbGroup.addLayer(
+                    m
+                  );
+
+                }
+
+              }
+            );
+
+          }
+
+        }
+
+      } catch (e) {
+
+        console.warn(
+          'Air traffic async load failed:',
+          e
+        );
+
+      }
+
+    },
+    250
+  );
+
+}
+
+
+// Build sequential trajectory directional vectors
+
+function buildTrajectoryVectors(
+  geo,
+  layerGroup
+) {
+
+  if (
+    !geo.markers ||
+    geo.markers.length === 0
+  ) {
+    return;
+  }
+
+
+  // 1. Path Polyline
+
+  if (
+    geo.path &&
+    geo.path.length >= 2
+  ) {
+
+    const polyline =
+      L.polyline(
+        geo.path,
+        {
+
+          color: '#38bdf8',
+
+          weight: 3,
+
+          opacity: 0.85,
+
+          dashArray: '8, 6',
+
+          lineCap: 'round',
+
+          lineJoin: 'round',
+
+          smoothFactor: 1.5
+
+        }
+      );
+
+    layerGroup.addLayer(
+      polyline
+    );
+
+  }
+
+
+  // 2. Velocity Leg Markers & Labels
+
+  if (
+    geo.legs &&
+    geo.legs.length > 0
+  ) {
+
+    const isManyLegs =
+      geo.legs.length > 35;
+
+
+    geo.legs.forEach(
+      leg => {
+
+        if (
+          isManyLegs &&
+          !leg.is_impossible &&
+          leg.speed_kmh < 100
+        ) {
+          return;
+        }
+
+
+        const midLat =
+          (leg.from_lat + leg.to_lat) /
+          2.0;
+
+        const midLon =
+          (leg.from_lon + leg.to_lon) /
+          2.0;
+
+
+        const speedColor =
+          leg.is_impossible
+            ? '#ef4444'
+            : '#38bdf8';
+
+
+        const vectorIcon =
+          L.divIcon({
+
+            className:
+              'vector-speed-badge',
+
+            html:
+              `<div style="background:#0f172a; border:1px solid ${speedColor}; color:${speedColor}; font-size:9px; font-weight:bold; padding:1px 5px; border-radius:4px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.8);">${leg.speed_kmh} km/h</div>`,
+
+            iconSize: [
+              60,
+              16
+            ],
+
+            iconAnchor: [
+              30,
+              8
+            ]
+
+          });
+
+
+        const vectorMarker =
+          L.marker(
+            [midLat, midLon],
+            {
+              icon: vectorIcon
+            }
+          );
+
+
+        vectorMarker.bindPopup(
+          `
+            <div style="font-family:monospace; font-size:11px; color:#f1f5f9; padding:4px;">
+
+              <div style="color:${speedColor}; font-weight:bold; margin-bottom:4px;">
+                ${
+                  leg.is_impossible
+                    ? '🚨 IMPOSSIBLE TRAVEL ANOMALY'
+                    : 'Hop Vector Velocity'
+                }
+              </div>
+
+              <div>
+                Hop #${leg.from_idx} → #${leg.to_idx}
+              </div>
+
+              <div>
+                Δd:
+                <b>${leg.distance_km} km</b>
+              </div>
+
+              <div>
+                Δt:
+                <b>${leg.time_diff_min} min</b>
+              </div>
+
+              <div>
+                Velocity:
+                <b style="color:${speedColor}">
+                  ${leg.speed_kmh} km/h
+                </b>
+              </div>
+
+              <div style="color:#94a3b8; font-size:10px; margin-top:4px;">
+                Towers:
+                ${leg.from_tower} → ${leg.to_tower}
+              </div>
+
+            </div>
+          `,
+          {
+            className: 'dark-popup'
+          }
+        );
+
+
+        layerGroup.addLayer(
+          vectorMarker
+        );
+
+      }
+    );
+
+  }
+
+}
+
+
+// Build Night-Owl vs Daytime Marker Groups
+
+function buildDayNightLayers(
+  markers,
+  nightGroup,
+  dayGroup
+) {
+
+  markers.forEach(
+    (m, idx) => {
+
+      const isNight =
+        m.is_night || false;
+
+
+      const markerColor =
+        isNight
+          ? '#f43f5e'
+          : (
+              m.call_type === 'INCOMING'
+                ? '#10b981'
+                : (
+                    m.call_type === 'SMS'
+                      ? '#f59e0b'
+                      : '#38bdf8'
+                  )
+            );
+
+
+      const customIcon =
+        L.divIcon({
+
+          className:
+            'custom-tower-marker',
+
+          html:
+            `
+              <div style="background:${markerColor}; width:24px; height:24px; border-radius:50%; border:2px solid #0f172a; display:flex; align-items:center; justify-content:center; color:#fff; font-family:monospace; font-size:10px; font-weight:bold; box-shadow:0 0 10px ${markerColor}99; cursor:pointer;">
+                ${idx + 1}
+              </div>
+            `,
+
+          iconSize: [
+            24,
+            24
+          ],
+
+          iconAnchor: [
+            12,
+            12
+          ],
+
+          popupAnchor: [
+            0,
+            -12
+          ]
+
+        });
+
+
+      const marker =
+        L.marker(
+          [m.lat, m.lon],
+          {
+            icon: customIcon
+          }
+        );
+
+
+      marker.bindPopup(
+        `
+          <div style="font-family:monospace;font-size:11px;min-width:210px;color:#f1f5f9;">
+
+            <div style="color:${markerColor};font-weight:bold;margin-bottom:6px;">
+              Hop #${idx + 1} • ${m.time_str || ''}
+            </div>
+
+            <div>
+              📞 ${m.caller} → ${m.receiver}
+            </div>
+
+            <div>
+              🗼 Tower:
+              <b>${m.cell_id || 'N/A'}</b>
+            </div>
+
+            <div>
+              ⬆ Type:
+              <b>${m.call_type}</b>
+            </div>
+
+            <div>
+              ⏱ Duration:
+              <b>${m.duration}s</b>
+            </div>
+
+            <div>
+              🚀 Speed from prev:
+              <b>${m.speed_kmh || 0} km/h</b>
+            </div>
+
+            <div>
+              📍 ${m.lat.toFixed(5)}, ${m.lon.toFixed(5)}
+            </div>
+
+            <button
+              onclick="inspectHop(currentMarkers[${idx}], ${idx}); if(leafletMap) leafletMap.closePopup();"
+              class="mt-2.5 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-cyber-cyan/20 border border-cyber-cyan/50 rounded text-[10px] text-cyber-cyan font-bold hover:bg-cyber-cyan/30 transition-all text-center"
+            >
+              <i data-lucide="crosshair" class="w-3 h-3"></i>
+              Open in Inspector Drawer
+            </button>
+
+          </div>
+        `,
+        {
+          className: 'dark-popup'
+        }
+      );
+
+
+      marker.on(
+        'click',
+        () => {
+          inspectHop(m, idx);
+        }
+      );
+
+
+      if (isNight) {
+
+        nightGroup.addLayer(
+          marker
+        );
+
+      } else {
+
+        dayGroup.addLayer(
+          marker
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+// Populate bottom timeline scrubber
+
+function populateChronologicalScrubber(
+  markers
+) {
+
+  const drawer =
+    document.getElementById(
+      'chronological-drawer'
+    );
+
+  const slider =
+    document.getElementById(
+      'traj-scrubber-slider'
+    );
+
+
+  if (
+    slider &&
+    markers.length > 0
+  ) {
+
+    slider.min = 0;
+
+    slider.max =
+      markers.length - 1;
+
+    slider.value = 0;
+
+  }
+
+
+  if (!drawer) {
+    return;
+  }
+
+
+  drawer.innerHTML = '';
+
+
+  markers.forEach(
+    (m, idx) => {
+
+      const hopBtn =
+        document.createElement(
+          'button'
+        );
+
+
+      hopBtn.id =
+        `traj-btn-${idx}`;
+
+
+      hopBtn.className =
+        'px-3 py-1.5 bg-cyber-surface/60 border border-cyber-border rounded-lg text-[10px] font-mono text-slate-300 hover:text-white hover:border-cyber-cyan transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0';
+
+
+      const isImpossible =
+        m.is_impossible ||
+        (m.speed_kmh > 900);
+
+
+      const speedBadge =
+        isImpossible
+          ? `<span class="px-1 py-0.2 bg-red-500/30 text-red-300 rounded text-[9px] font-bold">⚡ ${m.speed_kmh} km/h</span>`
+          : '';
+
+
+      hopBtn.innerHTML =
+        `
+
+          <span
+            class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-slate-950"
+            style="background:${m.color || '#38bdf8'}"
+          >
+            ${idx + 1}
+          </span>
+
+          <span class="font-bold">
+            ${
+              m.cell_id
+                ? (
+                    m.cell_id.length > 12
+                      ? m.cell_id.substring(0, 12) + '...'
+                      : m.cell_id
+                  )
+                : 'TOWER'
+            }
+          </span>
+
+          <span class="text-slate-500">
+            ${
+              m.time_str
+                ? m.time_str.substring(11, 16)
+                : ''
+            }
+          </span>
+
+          ${speedBadge}
+
+        `;
+
+
+      hopBtn.onclick =
+        () => inspectHop(
+          m,
+          idx
+        );
+
+
+      drawer.appendChild(
+        hopBtn
+      );
+
+    }
+  );
+
+}
+
+
+// ── Trajectory Playback Engine Controls ─────────────────────────────
+
+function toggleTrajectoryPlayback() {
+
+  if (isPlaybackRunning) {
+
+    pauseTrajectoryPlayback();
+
+  } else {
+
+    startTrajectoryPlayback();
+
+  }
+
+}
+
+
+function startTrajectoryPlayback() {
+
+  if (
+    !currentMarkers ||
+    currentMarkers.length === 0
+  ) {
+    return;
+  }
+
+
+  isPlaybackRunning = true;
+
+  updatePlaybackUI(
+    true
+  );
+
+
+  if (
+    currentHopIndex >=
+    currentMarkers.length - 1
+  ) {
+
+    currentHopIndex = 0;
+
+    inspectHop(
+      currentMarkers[0],
+      0
+    );
+
+  }
+
+
+  clearInterval(
+    playbackTimer
+  );
+
+
+  const interval =
+    Math.max(
+      250,
+      Math.round(
+        1100 / playbackSpeed
+      )
+    );
+
+
+  playbackTimer =
+    setInterval(
+      () => {
+
+        if (
+          currentHopIndex <
+          currentMarkers.length - 1
+        ) {
+
+          navigateTower(1);
+
+        } else {
+
+          pauseTrajectoryPlayback();
+
+        }
+
+      },
+      interval
+    );
+
+}
+
+
+function pauseTrajectoryPlayback() {
+
+  isPlaybackRunning = false;
+
+  clearInterval(
+    playbackTimer
+  );
+
+  playbackTimer = null;
+
+  updatePlaybackUI(
+    false
+  );
+
+}
+
+
+function setPlaybackSpeed(speed) {
+
+  playbackSpeed = speed;
+
+
+  document
+    .querySelectorAll(
+      '.playback-speed-btn'
+    )
+    .forEach(
+      btn => {
+
+        const s =
+          parseFloat(
+            btn.getAttribute(
+              'data-speed'
+            )
+          );
+
+
+        if (s === speed) {
+
+          btn.className =
+            'playback-speed-btn px-2 py-0.5 rounded text-cyber-cyan font-bold bg-cyber-cyan/20 border border-cyber-cyan/40';
+
+        } else {
+
+          btn.className =
+            'playback-speed-btn px-2 py-0.5 rounded text-slate-400 hover:text-white transition-all';
+
+        }
+
+      }
+    );
+
+
+  if (isPlaybackRunning) {
+
+    pauseTrajectoryPlayback();
+
+    startTrajectoryPlayback();
+
+  }
+
+}
+
+
+function updatePlaybackUI(playing) {
+
+  const btn =
+    document.getElementById(
+      'traj-play-btn'
+    );
+
+  const label =
+    document.getElementById(
+      'traj-play-label'
+    );
+
+
+  if (!btn) {
+    return;
+  }
+
+
+  if (playing) {
+
+    btn.innerHTML =
+      `
+        <i data-lucide="pause" class="w-3.5 h-3.5 text-white"></i>
+        <span id="traj-play-label">
+          Pause
+        </span>
+      `;
+
+
+    btn.className =
+      'px-3 py-1.5 bg-rose-500/20 border border-rose-500/50 rounded-lg text-xs font-bold text-rose-300 hover:bg-rose-500/30 transition-all flex items-center gap-1.5 font-mono shadow-sm';
+
+  } else {
+
+    btn.innerHTML =
+      `
+        <i data-lucide="play" class="w-3.5 h-3.5 text-cyber-cyan"></i>
+        <span id="traj-play-label">
+          Play Trajectory
+        </span>
+      `;
+
+
+    btn.className =
+      'px-3 py-1.5 bg-cyber-cyan/20 border border-cyber-cyan/50 rounded-lg text-xs font-bold text-cyber-cyan hover:bg-cyber-cyan/30 transition-all flex items-center gap-1.5 font-mono shadow-sm';
+
+  }
+
+
+  lucide.createIcons();
+
+}
+
+
+function onScrubberSliderInput(val) {
+
+  const idx =
+    parseInt(
+      val,
+      10
+    );
+
+
+  if (
+    !isNaN(idx) &&
+    currentMarkers[idx]
+  ) {
+
+    inspectHop(
+      currentMarkers[idx],
+      idx
+    );
+
+  }
+
+}
+
+
+// Locate and inspect hop by tower ID
+
+function inspectHopByCellId(
+  cellId,
+  lat,
+  lon
+) {
+
+  const matchIdx =
+    currentMarkers.findIndex(
+      m =>
+        m.cell_id === cellId ||
+        (
+          lat &&
+          Math.abs(m.lat - lat) < 0.001 &&
+          Math.abs(m.lon - lon) < 0.001
+        )
+    );
+
+
+  if (matchIdx !== -1) {
+
+    inspectHop(
+      currentMarkers[matchIdx],
+      matchIdx
+    );
+
+  } else {
+
+    inspectHop(
+      {
+        cell_id: cellId,
+        lat: lat,
+        lon: lon,
+        time_str: 'Seized Evidence Tower',
+        caller: '—',
+        receiver: '—',
+        call_type: 'EVIDENCE',
+        duration: 0
+      },
+      0
+    );
+
+  }
+
+}
+
+
+// Interactive Call Inspector Drawer
+
+function inspectHop(
+  m,
+  idx
+) {
+
+  if (!m) {
+    return;
+  }
+
+
+  currentHopIndex =
+    idx >= 0
+      ? idx
+      : 0;
+
+  currentSelectedHop =
+    m;
+
+
+  // Update Drawer Header
+
+  const badge =
+    document.getElementById(
+      'insp-hop-badge'
+    );
+
+  const ts =
+    document.getElementById(
+      'insp-timestamp'
+    );
+
+  const counter =
+    document.getElementById(
+      'trajectory-counter'
+    );
+
+
+  if (badge) {
+
+    badge.textContent =
+      idx >= 0
+        ? `Hop #${idx + 1} of ${currentMarkers.length}`
+        : 'Linked Tower';
+
+  }
+
+
+  if (ts) {
+
+    ts.textContent =
+      m.time_str ||
+      m.timestamp ||
+      '—';
+
+  }
+
+
+  if (counter) {
+
+    counter.textContent =
+      idx >= 0
+        ? `Hop #${idx + 1} of ${currentMarkers.length} Selected`
+        : 'Tower Selected';
+
+  }
+
+
+  // Caller & Receiver
+
+  const callerEl =
+    document.getElementById(
+      'insp-caller'
+    );
+
+  const receiverEl =
+    document.getElementById(
+      'insp-receiver'
+    );
+
+
+  if (callerEl) {
+    callerEl.textContent =
+      m.caller || '—';
+  }
+
+
+  if (receiverEl) {
+    receiverEl.textContent =
+      m.receiver || '—';
+  }
+
+
+  // Call Type & Duration
+
+  const typeBadge =
+    document.getElementById(
+      'insp-call-type-badge'
+    );
+
+  const durEl =
+    document.getElementById(
+      'insp-duration'
+    );
+
+
+  if (typeBadge) {
+
+    typeBadge.textContent =
+      m.call_type || 'CALL';
+
+
+    if (
+      m.call_type ===
+      'OUTGOING'
+    ) {
+
+      typeBadge.className =
+        'px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30';
+
+    } else if (
+      m.call_type ===
+      'INCOMING'
+    ) {
+
+      typeBadge.className =
+        'px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+
+    } else {
+
+      typeBadge.className =
+        'px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+
+    }
+
+  }
+
+
+  if (durEl) {
+
+    durEl.textContent =
+      `${m.duration || 0}s (${Math.round((m.duration || 0) / 60)} min)`;
+
+  }
+
+
+  // Tower ID & Coordinates
+
+  const cellEl =
+    document.getElementById(
+      'insp-cell-id'
+    );
+
+  const coordsEl =
+    document.getElementById(
+      'insp-coords'
+    );
+
+
+  if (cellEl) {
+
+    cellEl.textContent =
+      m.cell_id ||
+      'UNKNOWN_CELL';
+
+    cellEl.title =
+      m.cell_id || '';
+
+  }
+
+
+  if (coordsEl) {
+
+    coordsEl.textContent =
+      `${m.lat.toFixed(5)}, ${m.lon.toFixed(5)}`;
+
+  }
+
+
+  // Velocity Vector
+
+  const velEl =
+    document.getElementById(
+      'insp-velocity'
+    );
+
+
+  const isImpossible =
+    m.is_impossible ||
+    (m.speed_kmh > 900);
+
+
+  if (velEl) {
+
+    velEl.textContent =
+      `${m.speed_kmh || 0} km/h (Δd: ${m.distance_km || 0} km, Δt: ${m.time_diff_min || 0} min)`;
+
+    velEl.className =
+      `font-bold text-xs ${
+        isImpossible
+          ? 'text-red-400'
+          : 'text-cyber-emerald'
+      }`;
+
+  }
+
+
+  // Impossible Travel Warning Banner
+
+  const alertBox =
+    document.getElementById(
+      'insp-impossible-alert'
+    );
+
+  const alertText =
+    document.getElementById(
+      'insp-impossible-text'
+    );
+
+
+  if (alertBox) {
+
+    if (isImpossible) {
+
+      alertBox.classList.remove(
+        'hidden'
+      );
+
+      if (alertText) {
+
+        alertText.textContent =
+          `Calculated velocity is ${m.speed_kmh} km/h (distance: ${m.distance_km} km in ${m.time_diff_min} min). Exceeds physical travel speed threshold (>900 km/h). Potential SIM swap/clone or multi-device spoofing.`;
+
+      }
+
+    } else {
+
+      alertBox.classList.add(
+        'hidden'
+      );
+
+    }
+
+  }
+
+
+  // IMEI & IMSI
+
+  const imeiEl =
+    document.getElementById(
+      'insp-imei'
+    );
+
+  const imsiEl =
+    document.getElementById(
+      'insp-imsi'
+    );
+
+
+  if (imeiEl) {
+
+    imeiEl.textContent =
+      m.imei || '—';
+
+  }
+
+
+  if (imsiEl) {
+
+    imsiEl.textContent =
+      m.imsi || '—';
+
+  }
+
+
+  // Update Forensic Cell Tower & RAN Telemetry
+
+  updateTowerTelecomDossier(
+    m
+  );
+
+
+  // Update timeline range slider
+
+  const slider =
+    document.getElementById(
+      'traj-scrubber-slider'
+    );
+
+
+  if (slider) {
+
+    slider.value =
+      currentHopIndex;
+
+  }
+
+
+  const pbStatus =
+    document.getElementById(
+      'traj-playback-status'
+    );
+
+
+  if (pbStatus) {
+
+    pbStatus.textContent =
+      `Hop #${currentHopIndex + 1} of ${currentMarkers.length}`;
+
+  }
+
+
+  const pbTime =
+    document.getElementById(
+      'traj-playback-time'
+    );
+
+
+  if (pbTime) {
+
+    pbTime.textContent =
+      m.time_str ||
+      '--:--:--';
+
+  }
+
+
+  // Highlight active hop button
+
+  currentMarkers.forEach(
+    (_, i) => {
+
+      const btn =
+        document.getElementById(
+          `traj-btn-${i}`
+        );
+
+
+      if (btn) {
+
+        if (i === idx) {
+
+          btn.classList.add(
+            'border-cyber-cyan',
+            'bg-cyber-cyan/20',
+            'text-white',
+            'shadow-md'
+          );
+
+          btn.classList.remove(
+            'border-cyber-border',
+            'bg-cyber-surface/60',
+            'text-slate-300'
+          );
+
+          btn.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center'
+          });
+
+        } else {
+
+          btn.classList.remove(
+            'border-cyber-cyan',
+            'bg-cyber-cyan/20',
+            'text-white',
+            'shadow-md'
+          );
+
+          btn.classList.add(
+            'border-cyber-border',
+            'bg-cyber-surface/60',
+            'text-slate-300'
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+
+  // Center Map & Active Gliding Radar Marker
+
+  if (leafletMap) {
+
+    if (!activePulseMarker) {
+
+      const pulseIcon =
+        L.divIcon({
+
+          className:
+            'active-target-pulse-marker',
+
+          html:
+            `
+              <div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center;">
+
+                <div style="position:absolute; width:100%; height:100%; border-radius:50%; background:rgba(56, 189, 248, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+
+                <div style="width:14px; height:14px; border-radius:50%; background:#38bdf8; border:2px solid #ffffff; box-shadow:0 0 12px #38bdf8;"></div>
+
+              </div>
+            `,
+
+          iconSize: [
+            34,
+            34
+          ],
+
+          iconAnchor: [
+            17,
+            17
+          ]
+
+        });
+
+
+      activePulseMarker =
+        L.marker(
+          [m.lat, m.lon],
+          {
+            icon: pulseIcon,
+            zIndexOffset: 2000
+          }
+        ).addTo(
+          leafletMap
+        );
+
+    } else {
+
+      activePulseMarker.setLatLng(
+        [m.lat, m.lon]
+      );
+
+    }
+
+
+    // Proximity boundary circle
+
+    if (proximityCircle) {
+
+      leafletMap.removeLayer(
+        proximityCircle
+      );
+
+    }
+
+
+    proximityCircle =
+      L.circle(
+        [m.lat, m.lon],
+        {
+
+          radius: 450,
+
+          color:
+            isImpossible
+              ? '#f43f5e'
+              : '#38bdf8',
+
+          fillColor:
+            isImpossible
+              ? '#f43f5e'
+              : '#38bdf8',
+
+          fillOpacity: 0.12,
+
+          dashArray: '4, 4',
+
+          weight: 1.5
+
+        }
+      ).addTo(
+        leafletMap
+      );
+
+
+    const targetZoom =
+      Math.max(
+        leafletMap.getZoom(),
+        14
+      );
+
+    const center =
+      leafletMap.getCenter();
+
+    const dist =
+      center.distanceTo([
+        m.lat,
+        m.lon
+      ]);
+
+
+    if (isPlaybackRunning) {
+
+      leafletMap.panTo(
+        [m.lat, m.lon],
+        {
+          animate: true,
+          duration: 0.45,
+          easeLinearity: 0.2
+        }
+      );
+
+    } else if (dist > 1200) {
+
+      leafletMap.flyTo(
+        [m.lat, m.lon],
+        targetZoom,
+        {
+          duration: 0.8,
+          easeLinearity: 0.25
+        }
+      );
+
+    } else {
+
+      leafletMap.panTo(
+        [m.lat, m.lon],
+        {
+          animate: true,
+          duration: 0.35
+        }
+      );
+
+    }
+
+  }
+
+
+  // Show Inspector Drawer
+
+  const drawer =
+    document.getElementById(
+      'call-inspector-drawer'
+    );
+
+
+  if (drawer) {
+
+    drawer.classList.remove(
+      'hidden'
+    );
+
+  }
+
+
+  lucide.createIcons();
+
+}
+
+
+// Instant In-Memory Forensic Cell Tower & RAN Telemetry Dossier
+
+function updateTowerTelecomDossier(m) {
+
+  const statusEl =
+    document.getElementById(
+      'insp-tower-status'
+    );
+
+  const azimuthEl =
+    document.getElementById(
+      'insp-azimuth'
+    );
+
+  const carrierEl =
+    document.getElementById(
+      'insp-carrier'
+    );
+
+  const locationEl =
+    document.getElementById(
+      'insp-location'
+    );
+
+  const volumeEl =
+    document.getElementById(
+      'insp-tower-volume'
+    );
+
+
+  let towerMatch = null;
+
+
+  if (
+    currentGeoData &&
+    currentGeoData.towers &&
+    Array.isArray(
+      currentGeoData.towers
+    )
+  ) {
+
+    towerMatch =
+      currentGeoData.towers.find(
+        t =>
+          t.cell_id === m.cell_id ||
+          (
+            Math.abs(
+              t.lat - m.lat
+            ) < 0.0001 &&
+            Math.abs(
+              t.lon - m.lon
+            ) < 0.0001
+          )
+      );
+
+  }
+
+
+  const callCount =
+    towerMatch
+      ? towerMatch.count
+      : 1;
+
+
+  const azimuthVal =
+    (
+      m.azimuth !== undefined &&
+      m.azimuth !== null &&
+      m.azimuth !== ''
+    )
+      ? `${m.azimuth}°`
+      : (
+          towerMatch &&
+          towerMatch.azimuth
+            ? `${towerMatch.azimuth}°`
+            : '0° (Omni)'
+        );
+
+
+  const carrierVal =
+    m.operator ||
+    (
+      m.circle
+        ? `${m.circle} Telecom`
+        : 'RELIANCE JIO'
+    );
+
+
+  const locVal =
+    m.city ||
+    m.address ||
+    (
+      m.lat &&
+      m.lon
+        ? `${m.lat.toFixed(4)}, ${m.lon.toFixed(4)}`
+        : 'Urban Cell Sector'
+    );
+
+
+  if (statusEl) {
+
+    statusEl.textContent =
+      'ACTIVE / VERIFIED';
+
+  }
+
+
+  if (azimuthEl) {
+
+    azimuthEl.textContent =
+      azimuthVal;
+
+  }
+
+
+  if (carrierEl) {
+
+    carrierEl.textContent =
+      carrierVal;
+
+  }
+
+
+  if (locationEl) {
+
+    locationEl.textContent =
+      locVal;
+
+    locationEl.title =
+      locVal;
+
+  }
+
+
+  if (volumeEl) {
+
+    volumeEl.textContent =
+      `${callCount} Call${callCount > 1 ? 's' : ''} Logged`;
+
+  }
+
+}
+
+
+function closeCallInspector() {
+
+  const drawer =
+    document.getElementById(
+      'call-inspector-drawer'
+    );
+
+
+  if (drawer) {
+
+    drawer.classList.add(
+      'hidden'
+    );
+
+  }
+
+
+  if (
+    proximityCircle &&
+    leafletMap
+  ) {
+
+    leafletMap.removeLayer(
+      proximityCircle
+    );
+
+    proximityCircle = null;
+
+  }
+
+
+  if (
+    activePulseMarker &&
+    leafletMap
+  ) {
+
+    leafletMap.removeLayer(
+      activePulseMarker
+    );
+
+    activePulseMarker = null;
+
+  }
+
+}
+
+
+function centerMapOnCurrentHop() {
+
+  if (
+    currentSelectedHop &&
+    leafletMap
+  ) {
+
+    leafletMap.flyTo(
+      [
+        currentSelectedHop.lat,
+        currentSelectedHop.lon
+      ],
+      14,
+      {
+        duration: 0.8,
+        easeLinearity: 0.25
+      }
+    );
+
+  }
+
+}
+
+
+function navigateTower(delta) {
+
+  if (
+    !currentMarkers ||
+    currentMarkers.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  let newIdx =
+    currentHopIndex + delta;
+
+
+  if (newIdx < 0) {
+
+    newIdx =
+      currentMarkers.length - 1;
+
+  }
+
+
+  if (
+    newIdx >=
+    currentMarkers.length
+  ) {
+
+    newIdx = 0;
+
+  }
+
+
+  inspectHop(
+    currentMarkers[newIdx],
+    newIdx
+  );
+
+}
+
+
+// ── Quick Toggle Header Helpers ─────────────────────────────────────
+
+function toggleBaseLayerQuick(type) {
+
+  if (!leafletMap) {
+    return;
+  }
+
+
+  if (type === 'satellite') {
+
+    if (
+      leafletMap.hasLayer(
+        satelliteLayer
+      )
+    ) {
+
+      leafletMap.removeLayer(
+        satelliteLayer
+      );
+
+      leafletMap.addLayer(
+        darkTacticalLayer
+      );
+
+    } else {
+
+      leafletMap.removeLayer(
+        darkTacticalLayer
+      );
+
+      leafletMap.removeLayer(
+        standardStreetLayer
+      );
+
+      leafletMap.removeLayer(
+        openTopoLayer
+      );
+
+      leafletMap.addLayer(
+        satelliteLayer
+      );
+
+    }
+
+  }
+
+}
+
+
+function toggleOverlayQuick(type) {
+
+  if (!leafletMap) {
+    return;
+  }
+
+
+  // Toggle Cluster Mode
+
+  if (type === 'cluster') {
+
+    isClusterMode =
+      !isClusterMode;
+
+
+    const btn =
+      document.getElementById(
+        'quick-cluster-btn'
+      );
+
+
+    if (
+      nightCallsLayer &&
+      dayCallsLayer &&
+      leafletMap &&
+      currentMarkers.length > 0
+    ) {
+
+      leafletMap.removeLayer(
+        nightCallsLayer
+      );
+
+      leafletMap.removeLayer(
+        dayCallsLayer
+      );
+
+
+      if (isClusterMode) {
+
+        nightCallsLayer =
+          createClusterOrLayerGroup(
+            'rgba(244, 63, 94, 0.9)'
+          );
+
+        dayCallsLayer =
+          createClusterOrLayerGroup(
+            'rgba(56, 189, 248, 0.9)'
+          );
+
+      } else {
+
+        nightCallsLayer =
+          L.layerGroup();
+
+        dayCallsLayer =
+          L.layerGroup();
+
+      }
+
+
+      buildDayNightLayers(
+        currentMarkers,
+        nightCallsLayer,
+        dayCallsLayer
+      );
+
+
+      nightCallsLayer.addTo(
+        leafletMap
+      );
+
+      dayCallsLayer.addTo(
+        leafletMap
+      );
+
+
+      if (btn) {
+
+        btn.classList.toggle(
+          'bg-cyber-cyan/20',
+          isClusterMode
+        );
+
+        btn.classList.toggle(
+          'border-cyber-cyan/50',
+          isClusterMode
+        );
+
+        btn.classList.toggle(
+          'text-cyber-cyan',
+          isClusterMode
+        );
+
+        btn.classList.toggle(
+          'bg-cyber-surface',
+          !isClusterMode
+        );
+
+        btn.classList.toggle(
+          'border-cyber-border',
+          !isClusterMode
+        );
+
+        btn.classList.toggle(
+          'text-slate-300',
+          !isClusterMode
+        );
+
+      }
+
+    }
+
+    return;
+
+  }
+
+
+  let targetLayer = null;
+  let btnId = '';
+
+
+  if (type === 'radar') {
+
+    targetLayer =
+      radarLayer;
+
+    btnId =
+      'quick-radar-btn';
+
+  } else if (type === 'cables') {
+
+    targetLayer =
+      submarineCablesLayer;
+
+    btnId =
+      'quick-cables-btn';
+
+  } else if (type === 'earthquakes') {
+
+    targetLayer =
+      earthquakeLayer;
+
+    btnId =
+      'quick-quakes-btn';
+
+  } else if (type === 'terminator') {
+
+    targetLayer =
+      terminatorLayer;
+
+    btnId =
+      'quick-terminator-btn';
+
+  } else if (type === 'adsb') {
+
+    targetLayer =
+      adsbLayer;
+
+    btnId =
+      'quick-adsb-btn';
+
+  } else if (type === 'heatmap') {
+
+    targetLayer =
+      heatLayer;
+
+    btnId =
+      'quick-heat-btn';
+
+  } else if (type === 'trajectory') {
+
+    targetLayer =
+      trajectoryLayerGroup;
+
+    btnId =
+      'quick-traj-btn';
+
+  }
+
+
+  if (targetLayer) {
+
+    if (
+      leafletMap.hasLayer(
+        targetLayer
+      )
+    ) {
+
+      leafletMap.removeLayer(
+        targetLayer
+      );
+
+      updateQuickBtnActive(
+        btnId,
+        false
+      );
+
+    } else {
+
+      leafletMap.addLayer(
+        targetLayer
+      );
+
+      updateQuickBtnActive(
+        btnId,
+        true
+      );
+
+    }
+
+  }
+
+}
+
+
+function updateQuickBtnActive(
+  btnId,
+  isActive
+) {
+
+  const btn =
+    document.getElementById(
+      btnId
+    );
+
+
+  if (!btn) {
+    return;
+  }
+
+
+  if (isActive) {
+
+    btn.classList.add(
+      'bg-cyber-cyan/20',
+      'border-cyber-cyan/50',
+      'text-cyber-cyan',
+      'font-bold'
+    );
+
+    btn.classList.remove(
+      'bg-cyber-surface',
+      'border-cyber-border',
+      'text-slate-300'
+    );
+
+  } else {
+
+    btn.classList.remove(
+      'bg-cyber-cyan/20',
+      'border-cyber-cyan/50',
+      'text-cyber-cyan',
+      'font-bold'
+    );
+
+    btn.classList.add(
+      'bg-cyber-surface',
+      'border-cyber-border',
+      'text-slate-300'
+    );
+
+  }
+
+}
+
+
+function syncQuickToggleBadge(
+  layer,
+  isAdded
+) {
+
+  if (layer === radarLayer) {
+    updateQuickBtnActive(
+      'quick-radar-btn',
+      isAdded
+    );
+  }
+
+  if (
+    layer === submarineCablesLayer
+  ) {
+    updateQuickBtnActive(
+      'quick-cables-btn',
+      isAdded
+    );
+  }
+
+  if (layer === earthquakeLayer) {
+    updateQuickBtnActive(
+      'quick-quakes-btn',
+      isAdded
+    );
+  }
+
+  if (layer === terminatorLayer) {
+    updateQuickBtnActive(
+      'quick-terminator-btn',
+      isAdded
+    );
+  }
+
+  if (layer === adsbLayer) {
+    updateQuickBtnActive(
+      'quick-adsb-btn',
+      isAdded
+    );
+  }
+
+  if (layer === heatLayer) {
+    updateQuickBtnActive(
+      'quick-heat-btn',
+      isAdded
+    );
+  }
+
+  if (
+    layer === trajectoryLayerGroup
+  ) {
+    updateQuickBtnActive(
+      'quick-traj-btn',
+      isAdded
+    );
+  }
+
+}
+
+
+function resetMapView() {
+
+  if (
+    leafletMap &&
+    currentMarkers &&
+    currentMarkers.length > 0
+  ) {
+
+    const bounds =
+      L.latLngBounds(
+        currentMarkers.map(
+          m => [
+            m.lat,
+            m.lon
+          ]
+        )
+      );
+
+
+    leafletMap.flyToBounds(
+      bounds,
+      {
+
+        padding: [
+          45,
+          45
+        ],
+
+        maxZoom: 15,
+
+        duration: 0.85,
+
+        easeLinearity: 0.25
+
+      }
+    );
+
+  } else if (
+    leafletMap &&
+    geoCenter
+  ) {
+
+    leafletMap.flyTo(
+      geoCenter,
+      12,
+      {
+        duration: 0.85
+      }
+    );
+
+  }
+
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// CDR DATATABLE & TABLE-TO-MAP CORRELATION
+// ══════════════════════════════════════════════════════════════════════════
+
+function locateTowerFromTable(
+  cellId,
+  lat,
+  lon
+) {
+
+  const target =
+    document.getElementById(
+      'section-geo-tracking'
+    );
+
+
+  if (target) {
+
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+  }
+
+
+  const matchIdx =
+    currentMarkers.findIndex(
+      m =>
+        m.cell_id === cellId ||
+        (
+          lat &&
+          Math.abs(
+            m.lat - lat
+          ) < 0.001 &&
+          Math.abs(
+            m.lon - lon
+          ) < 0.001
+        )
+    );
+
+
+  if (matchIdx !== -1) {
+
+    inspectHop(
+      currentMarkers[matchIdx],
+      matchIdx
+    );
+
+  } else if (
+    lat &&
+    lon
+  ) {
+
+    inspectHop(
+      {
+        cell_id: cellId,
+        lat: lat,
+        lon: lon,
+        time_str: 'Table Record',
+        caller: '—',
+        receiver: '—',
+        call_type: 'RECORD',
+        duration: 0
+      },
+      -1
+    );
+
+  }
+
+}
+
+
+async function loadRecords() {
+
+  const res =
+    await fetch(
+      `/api/records/${SESSION_ID}`
+    );
+
+  const records =
+    await res.json();
+
+
+  const typeColors = {
+
+    OUTGOING:
+      'text-cyber-cyan',
+
+    INCOMING:
+      'text-cyber-emerald',
+
+    SMS:
+      'text-cyber-amber',
+
+    ROAMING:
+      'text-cyber-purple'
+
+  };
+
+
+  const tableData =
+    records.map(
+      r => {
+
+        let towerDisplay =
+          r.cell_id || '—';
+
+
+        if (r.cell_id) {
+
+          const latVal =
+            (
+              r.lat !== undefined &&
+              r.lat !== null &&
+              r.lat !== ''
+            )
+              ? r.lat
+              : 'null';
+
+
+          const lonVal =
+            (
+              r.lon !== undefined &&
+              r.lon !== null &&
+              r.lon !== ''
+            )
+              ? r.lon
+              : 'null';
+
+
+          towerDisplay =
+            `
+              <button
+                onclick="locateTowerFromTable('${r.cell_id}', ${latVal}, ${lonVal})"
+                class="text-cyber-cyan hover:underline font-mono text-xs flex items-center gap-1"
+              >
+                <span class="w-1.5 h-1.5 rounded-full bg-cyber-cyan"></span>
+                ${r.cell_id}
+              </button>
+            `;
+
+        }
+
+
+        return [
+
+          r.timestamp
+            ? r.timestamp
+                .substring(0, 16)
+                .replace('T', ' ')
+            : '—',
+
+          `<span class="font-mono text-xs">${r.caller}</span>`,
+
+          `<span class="font-mono text-xs">${r.receiver}</span>`,
+
+          `<span class="text-xs font-mono ${typeColors[r.call_type] || 'text-slate-400'}">${r.call_type}</span>`,
+
+          r.duration,
+
+          towerDisplay,
+
+          r.imei || '—',
+
+        ];
+
+      }
+    );
+
+
+  $('#cdr-table').DataTable({
+
+    data: tableData,
+
+    deferRender: true,
+
+    pageLength: 25,
+
+    lengthMenu: [
+      10,
+      25,
+      50,
+      100
+    ],
+
+    dom:
+      '<"flex flex-wrap items-center justify-between gap-2 mb-4"Bf>t<"flex flex-wrap items-center justify-between gap-2 mt-4"lip>',
+
+    buttons: [
+      'copy',
+      'csv',
+      'excel',
+      'pdf',
+      'print'
+    ],
+
+    responsive: true,
+
+    drawCallback:
+      function() {
+        lucide.createIcons();
+      },
+
+    language: {
+
+      search: '',
+
+      searchPlaceholder:
+        'Search records...',
+
+      lengthMenu:
+        'Show _MENU_ records',
+
+      info:
+        'Showing _START_ to _END_ of _TOTAL_ records',
+
+    }
+
+  });
+
+}
+
+
+// Anomaly alert counter
+
+async function loadAnomalyCount() {
+
+  const res =
+    await fetch(
+      `/api/anomalies/${SESSION_ID}`
+    );
+
+  const data =
+    await res.json();
+
+
+  const count =
+    data.impossible_travel.length +
+    (
+      data.device_swaps.handset_hopping
+        ? 1
+        : 0
+    ) +
+    (
+      data.device_swaps.sim_swapping
+        ? 1
+        : 0
+    );
+
+
+  if (count > 0) {
+
+    const indicator =
+      document.getElementById(
+        'alert-indicator'
+      );
+
+    document.getElementById(
+      'alert-count'
+    ).textContent =
+      count;
+
+    indicator.classList.remove(
+      'hidden'
+    );
+
+  }
+
+}
+
+
+// ── Bootstrap ────────────────────────────────────────────────────────────
+
+document.addEventListener(
+  'DOMContentLoaded',
+  async () => {
+
+    lucide.createIcons();
+
+    await loadAll();
+
+    await loadAnomalyCount();
+
+
+    // If hash is present
+
+    if (window.location.hash) {
+
+      const target =
+        document.querySelector(
+          window.location.hash
+        );
+
+
+      if (target) {
+
+        setTimeout(
+          () => {
+
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+
+
+            if (
+              typeof highlightElement ===
+              'function'
+            ) {
+
+              highlightElement(
+                target
+              );
+
+            }
+
+
+            if (
+              window.location.hash ===
+              '#section-link-analysis' &&
+              typeof fitGraph ===
+              'function'
+            ) {
+
+              fitGraph();
+
+            }
+
+
+            if (
+              window.location.hash ===
+              '#section-geo-tracking' &&
+              leafletMap
+            ) {
+
+              leafletMap.invalidateSize();
+
+            }
+
+          },
+          500
+        );
+
+      }
+
+    }
+
+  }
+);
+
+</script>
+
+{% endblock %}

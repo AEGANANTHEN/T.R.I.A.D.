@@ -1,0 +1,2654 @@
+{% extends "layout.html" %}
+
+{% block title %}Cross-Match Analysis — T.R.I.A.D.{% endblock %}
+{% block page_title %}Multi-Target Cross-Match Analysis{% endblock %}
+
+{% block content %}
+
+<div class="space-y-6">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 bg-cyber-amber/20 border border-cyber-amber/40 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i data-lucide="git-fork" class="w-5 h-5 text-cyber-amber"></i>
+      </div>
+
+      <div>
+        <h1 class="text-xl font-bold text-white font-mono">
+          Multi-Target Cross-Match & Comparative Intel
+        </h1>
+
+        <p class="text-xs text-slate-500">
+          {{ data.labels | length }} targets analyzed
+          &nbsp;•&nbsp;
+          <span class="text-cyber-amber font-mono font-bold">
+            {{ data.common_contacts | length }}
+          </span>
+          mutual contacts
+          &nbsp;•&nbsp;
+          <span class="text-cyber-rose font-mono font-bold">
+            {{ data.colocation | length }}
+          </span>
+          co-location events
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 flex-wrap">
+
+      <!-- Export Report Dropdown -->
+      <div class="relative inline-block text-left" id="cross-export-wrapper">
+
+        <button
+          onclick="toggleCrossExportMenu()"
+          type="button"
+          class="px-3.5 py-1.5 bg-cyber-amber/15 border border-cyber-amber/40 rounded-lg text-xs font-mono font-bold text-cyber-amber hover:bg-cyber-amber/25 transition-all flex items-center gap-1.5 shadow-md shadow-cyber-amber/10"
+        >
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          Export Dossier ▾
+        </button>
+
+        <div
+          id="cross-export-menu"
+          class="hidden absolute right-0 mt-2 w-56 bg-cyber-card border border-cyber-border rounded-xl shadow-2xl py-2 z-50 font-mono text-xs"
+        >
+
+          <a
+            href="{{ url_for('report_view', session_id=session_id) }}"
+            target="_blank"
+            onclick="closeCrossExportMenu()"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="printer" class="w-4 h-4 text-cyber-cyan"></i>
+
+            <div>
+              <div class="font-bold">Printable PDF Dossier</div>
+              <div class="text-[10px] text-slate-500">
+                Official Forensic Print/PDF
+              </div>
+            </div>
+          </a>
+
+          <a
+            href="{{ url_for('export_excel', session_id=session_id) }}"
+            download="CDR_Forensic_Report_{{ session_id[:8] }}.xlsx"
+            onclick="handleCrossExportClick(event, 'Cross-Match Excel Workbook (.XLSX)')"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-cyber-emerald"></i>
+
+            <div>
+              <div class="font-bold">Cross-Match Excel (.XLSX)</div>
+              <div class="text-[10px] text-slate-500">
+                Mutual contacts & co-location
+              </div>
+            </div>
+          </a>
+
+          <a
+            href="{{ url_for('export_csv', session_id=session_id) }}"
+            download="CDR_Records_{{ session_id[:8] }}.csv"
+            onclick="handleCrossExportClick(event, 'Mutual Contacts CSV')"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="file-text" class="w-4 h-4 text-cyber-amber"></i>
+
+            <div>
+              <div class="font-bold">Mutual Contacts (.CSV)</div>
+              <div class="text-[10px] text-slate-500">
+                Shared interlocutor list
+              </div>
+            </div>
+          </a>
+
+          <div class="border-t border-cyber-border my-1"></div>
+
+          <a
+            href="{{ url_for('export_json', session_id=session_id) }}"
+            download="CDR_Dossier_{{ session_id[:8] }}.json"
+            onclick="handleCrossExportClick(event, 'JSON Intelligence Package')"
+            class="flex items-center gap-2.5 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <i data-lucide="code" class="w-4 h-4 text-cyber-purple"></i>
+
+            <div>
+              <div class="font-bold">JSON Intelligence Package</div>
+              <div class="text-[10px] text-slate-500">
+                Complete raw dataset
+              </div>
+            </div>
+          </a>
+
+        </div>
+      </div>
+
+      <a
+        href="{{ url_for('history_view') }}"
+        class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded-lg text-xs font-mono text-slate-400 hover:text-white transition-colors flex items-center gap-1.5"
+      >
+        <i data-lucide="history" class="w-3.5 h-3.5 text-cyber-purple"></i>
+        History
+      </a>
+
+      <a
+        href="{{ url_for('index', tab='multi') }}"
+        class="px-3 py-1.5 bg-cyber-cyan text-cyber-bg font-bold rounded-lg text-xs font-mono uppercase hover:bg-cyber-cyan/90 transition-colors flex items-center gap-1.5"
+      >
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        New Cross-Match
+      </a>
+
+    </div>
+  </div>
+
+
+  <!-- ── Target Badges ───────────────────────────────────────────── -->
+
+  <div class="flex flex-wrap gap-2.5">
+
+    {% set colors = ['#38bdf8','#10b981','#f59e0b','#f43f5e','#818cf8'] %}
+
+    {% for i in range(data.labels | length) %}
+
+      {% set c = colors[i % 5] %}
+
+      <div
+        class="flex items-center gap-2.5 px-3 py-2 glass-card rounded-lg border-l-2"
+        style="border-left-color: {{ c }};"
+      >
+
+        <span
+          class="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold font-mono"
+          style="background: {{ c }}20; color: {{ c }}; border: 1px solid {{ c }}40;"
+        >
+          T{{ i + 1 }}
+        </span>
+
+        <div>
+          <p class="text-xs text-white font-mono font-bold">
+            {{ data.targets[i] if data.targets[i] else 'Auto-detected' }}
+          </p>
+
+          <p class="text-[10px] text-slate-500 font-mono truncate max-w-[140px]">
+            {{ data.labels[i] }}
+          </p>
+        </div>
+
+      </div>
+
+    {% endfor %}
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- KPI COMPARISON TABLE                                           -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="glass-card p-5 overflow-x-auto">
+
+    <div class="flex items-center justify-between mb-4">
+
+      <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+        <i data-lucide="bar-chart-3" class="w-4 h-4 text-cyber-cyan"></i>
+        Target KPI Comparison Matrix
+      </h3>
+
+      <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+        Side-by-Side Metrics
+      </span>
+
+    </div>
+
+    <table class="w-full text-xs font-mono min-w-[600px]">
+
+      <thead>
+        <tr class="border-b border-cyber-border">
+
+          <th class="text-left pb-3 text-slate-500 pr-4 font-medium">
+            Metric
+          </th>
+
+          {% for i in range(data.labels | length) %}
+
+            <th
+              class="text-right pb-3 pr-4 font-medium"
+              style="color: {{ colors[i % 5] }};"
+            >
+              T{{ i+1 }}: {{ data.labels[i][:20] }}
+            </th>
+
+          {% endfor %}
+
+        </tr>
+      </thead>
+
+      <tbody
+        class="divide-y divide-cyber-border/40"
+        id="kpi-matrix-body"
+      >
+        <!-- Filled by JS -->
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- COMPARATIVE CHARTS ROW 1                                      -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- 24-Hour Overlay Chart -->
+
+    <div class="xl:col-span-2 glass-card p-5">
+
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+
+        <div>
+
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-cyber-cyan"></i>
+            24-Hour Call Activity Comparison
+          </h3>
+
+          <p class="text-xs text-slate-500 mt-0.5">
+            Overlaid hourly activity curves to detect synchronized routines and night coordination
+          </p>
+
+        </div>
+
+        <div class="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+          <span class="px-2 py-0.5 rounded bg-cyber-purple/20 text-cyber-purple">
+            Night: 00:00–05:00
+          </span>
+        </div>
+
+      </div>
+
+      <div class="chart-container" style="height: 280px;">
+        <canvas id="chart-compare-hourly"></canvas>
+      </div>
+
+    </div>
+
+
+    <!-- Day-of-Week Radar Comparison -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <div>
+
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="calendar" class="w-4 h-4 text-cyber-emerald"></i>
+            Weekly Routine Comparison
+          </h3>
+
+          <p class="text-xs text-slate-500 mt-0.5">
+            Mon–Sun behavioral pattern
+          </p>
+
+        </div>
+
+      </div>
+
+      <div class="chart-container" style="height: 280px;">
+        <canvas id="chart-compare-dow"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- COMPARATIVE CHARTS ROW 2                                      -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+    <!-- Call Direction & Type Grouped Bar -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <div>
+
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="phone-call" class="w-4 h-4 text-cyber-cyan"></i>
+            Call Direction & Type Comparison
+          </h3>
+
+          <p class="text-xs text-slate-500 mt-0.5">
+            Volume comparison across Incoming, Outgoing, SMS, and Night Calls
+          </p>
+
+        </div>
+
+      </div>
+
+      <div class="chart-container" style="height: 260px;">
+        <canvas id="chart-compare-types"></canvas>
+      </div>
+
+    </div>
+
+
+    <!-- Forensic Risk Profile Radar -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <div>
+
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-cyber-rose"></i>
+            Target Forensic Risk Indices
+          </h3>
+
+          <p class="text-xs text-slate-500 mt-0.5">
+            Multi-axis index for Night Ratio, Speed Alerts, IMEIs, Contact Breadth, Talk Time
+          </p>
+
+        </div>
+
+      </div>
+
+      <div class="chart-container" style="height: 260px;">
+        <canvas id="chart-compare-risk"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- MUTUAL CONTACTS & INTERACTION BREAKDOWN                        -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- Common Contacts List -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+
+          <i data-lucide="git-merge" class="w-4 h-4 text-cyber-amber"></i>
+
+          Mutual Contacts List
+
+          <span class="px-2 py-0.5 bg-cyber-amber/20 text-cyber-amber text-[10px] rounded font-mono font-bold">
+            {{ data.common_contacts | length }}
+          </span>
+
+        </h3>
+
+      </div>
+
+
+      {% if data.common_contacts %}
+
+        <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+
+          {% for contact in data.common_contacts %}
+
+            <div class="flex items-center justify-between bg-cyber-surface rounded-lg px-3 py-2 border border-cyber-border hover:border-cyber-amber/40 transition-colors">
+
+              <span class="text-xs font-mono text-white font-bold">
+                {{ contact.contact }}
+              </span>
+
+              <div class="flex items-center gap-1.5">
+
+                {% for label in contact.present_in %}
+
+                  <span
+                    class="px-1.5 py-0.5 text-[9px] rounded font-bold font-mono"
+                    style="background: rgba(56,189,248,0.15); color: #38bdf8;"
+                  >
+                    {{ label[:8] }}
+                  </span>
+
+                {% endfor %}
+
+                <span class="text-[10px] text-cyber-amber font-mono font-bold">
+                  ({{ contact.target_count }}T)
+                </span>
+
+              </div>
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      {% else %}
+
+        <div class="flex flex-col items-center justify-center text-xs text-slate-500 py-12">
+
+          <i data-lucide="search-x" class="w-6 h-6 mb-2 text-slate-600"></i>
+
+          No mutual contacts detected across targets
+
+        </div>
+
+      {% endif %}
+
+    </div>
+
+
+    <!-- Top Mutual Contacts Call Breakdown Chart -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="users-2" class="w-4 h-4 text-cyber-amber"></i>
+          Top Shared Contacts Call Volume
+        </h3>
+
+      </div>
+
+      <div class="chart-container" style="height: 300px;">
+        <canvas id="chart-shared-breakdown"></canvas>
+      </div>
+
+    </div>
+
+
+    <!-- Shared Contact Matrix Heatmap Chart -->
+
+    <div class="glass-card p-5">
+
+      <div class="flex items-center justify-between mb-4">
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="grid" class="w-4 h-4 text-cyber-purple"></i>
+          Shared Contact Intersect Matrix
+        </h3>
+
+      </div>
+
+      <div class="chart-container" style="height: 300px;">
+        <canvas id="chart-matrix"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CO-LOCATION EVENTS                                             -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="glass-card p-5">
+
+    <div class="flex items-center justify-between mb-4">
+
+      <div class="flex items-center gap-3">
+
+        {% if data.colocation %}
+          <div class="beacon beacon-red"></div>
+        {% endif %}
+
+        <h3
+          class="text-sm font-semibold {{ 'text-cyber-rose' if data.colocation else 'text-white' }} flex items-center gap-2"
+        >
+
+          <i data-lucide="map-pin" class="w-4 h-4"></i>
+
+          Spatial Convergence / Co-location Events
+
+          <span
+            class="px-2 py-0.5 {{ 'bg-cyber-rose/20 text-cyber-rose' if data.colocation else 'bg-slate-800 text-slate-500' }} text-[10px] font-mono rounded"
+          >
+            {{ data.colocation | length }}
+          </span>
+
+        </h3>
+
+      </div>
+
+      <span class="text-xs text-slate-500 font-mono">
+        ±15 min co-presence threshold
+      </span>
+
+    </div>
+
+
+    {% if data.colocation %}
+
+      <div class="mb-3 flex items-center gap-2 text-xs text-cyber-amber bg-cyber-amber/10 border border-cyber-amber/30 rounded-lg px-3 py-2">
+
+        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 flex-shrink-0"></i>
+
+        Targets pinged the same cell tower within a ±15 minute window — potential physical meeting or co-location
+
+      </div>
+
+
+      <div class="overflow-x-auto">
+
+        <table class="w-full text-xs font-mono">
+
+          <thead>
+
+            <tr class="border-b border-cyber-border text-left">
+
+              <th class="pb-2 text-slate-500 pr-4">
+                Cell Tower
+              </th>
+
+              <th class="pb-2 text-slate-500 pr-4">
+                Target A
+              </th>
+
+              <th class="pb-2 text-slate-500 pr-4">
+                Target B
+              </th>
+
+              <th class="pb-2 text-slate-500 pr-4">
+                Time A
+              </th>
+
+              <th class="pb-2 text-slate-500 pr-4">
+                Time B
+              </th>
+
+              <th class="pb-2 text-slate-500">
+                Δ Min
+              </th>
+
+            </tr>
+
+          </thead>
+
+          <tbody class="divide-y divide-cyber-border/50">
+
+            {% for event in data.colocation[:50] %}
+
+              <tr class="hover:bg-cyber-rose/5 transition-colors">
+
+                <td class="py-2 pr-4 text-cyber-amber">
+                  {{ event.cell_id }}
+                </td>
+
+                <td class="py-2 pr-4 text-slate-300">
+                  {{ event.target_a[:20] }}
+                </td>
+
+                <td class="py-2 pr-4 text-slate-300">
+                  {{ event.target_b[:20] }}
+                </td>
+
+                <td class="py-2 pr-4 text-slate-400">
+                  {{ event.time_a[:16] if event.time_a else '—' }}
+                </td>
+
+                <td class="py-2 pr-4 text-slate-400">
+                  {{ event.time_b[:16] if event.time_b else '—' }}
+                </td>
+
+                <td class="py-2">
+
+                  <span
+                    class="px-2 py-0.5 rounded text-[10px] font-bold {{ 'bg-cyber-rose/20 text-cyber-rose' if event.diff_minutes < 5 else 'bg-cyber-amber/20 text-cyber-amber' }}"
+                  >
+                    {{ event.diff_minutes }} min
+                  </span>
+
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    {% else %}
+
+      <div class="flex items-center gap-2 text-xs text-slate-500 py-6 justify-center">
+
+        <i data-lucide="check-circle" class="w-4 h-4 text-cyber-emerald"></i>
+
+        No spatial co-location events detected within ±15 minutes
+
+      </div>
+
+    {% endif %}
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CROSS-MATCH MAP                                                -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  {% if data.colocation %}
+
+    <div class="glass-card p-5">
+
+      <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+
+        <i data-lucide="map" class="w-4 h-4 text-cyber-emerald"></i>
+
+        Spatial Convergence Map
+
+      </h3>
+
+      <div
+        id="cross-map"
+        class="w-full rounded-xl overflow-hidden border border-cyber-border"
+        style="height: 400px;"
+      ></div>
+
+    </div>
+
+  {% endif %}
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- INDIVIDUAL TARGET PROFILES                                     -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div>
+
+    <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+
+      <i data-lucide="users" class="w-4 h-4 text-cyber-cyan"></i>
+
+      Individual Target Summary Profiles
+
+    </h3>
+
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+
+      {% for ind in data.individuals %}
+
+        {% set i = loop.index0 %}
+        {% set c = colors[i % 5] %}
+
+        <div
+          class="glass-card p-5 border-l-2"
+          style="border-left-color: {{ c }};"
+        >
+
+          <div class="flex items-center gap-3 mb-4">
+
+            <div
+              class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm font-mono"
+              style="background: {{ c }}20; color: {{ c }}; border: 1px solid {{ c }}40;"
+            >
+              T{{ i + 1 }}
+            </div>
+
+            <div class="min-w-0 flex-1">
+
+              <p
+                class="text-sm font-mono font-bold truncate"
+                style="color: {{ c }};"
+              >
+                {{ ind.target }}
+              </p>
+
+              <p class="text-[10px] text-slate-500 truncate">
+                {{ ind.filename }}
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="space-y-2 text-xs font-mono">
+
+            <div class="flex justify-between">
+              <span class="text-slate-500">Total Records</span>
+              <span class="text-white font-bold">
+                {{ ind.kpis.total_records }}
+              </span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-slate-500">Unique Contacts</span>
+              <span class="text-white">
+                {{ ind.kpis.unique_contacts }}
+              </span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-slate-500">Talk Time</span>
+              <span class="text-white">
+                {{ ind.kpis.total_duration_hms }}
+              </span>
+            </div>
+
+            <div class="flex justify-between">
+
+              <span class="text-slate-500">
+                Night Calls
+              </span>
+
+              <span
+                class="{{ 'text-cyber-rose font-bold' if ind.kpis.night_calls > 0 else 'text-slate-400' }}"
+              >
+                {{ ind.kpis.night_calls }}
+              </span>
+
+            </div>
+
+            <div class="flex justify-between">
+
+              <span class="text-slate-500">
+                In / Out
+              </span>
+
+              <span class="text-white">
+                {{ ind.kpis.incoming }} / {{ ind.kpis.outgoing }}
+              </span>
+
+            </div>
+
+            <div class="flex justify-between">
+
+              <span class="text-slate-500">
+                IMEI Count
+              </span>
+
+              <span
+                class="{{ 'text-cyber-amber font-bold' if ind.kpis.imei_count > 1 else 'text-white' }}"
+              >
+                {{ ind.kpis.imei_count }}
+              </span>
+
+            </div>
+
+            <div class="flex justify-between">
+
+              <span class="text-slate-500">
+                Date Range
+              </span>
+
+              <span class="text-slate-300 text-[10px]">
+                {{ ind.kpis.date_range }}
+              </span>
+
+            </div>
+
+
+            {% if ind.impossible_travel | length > 0 %}
+
+              <div class="flex items-center gap-1.5 pt-1">
+
+                <div class="beacon beacon-red w-2 h-2"></div>
+
+                <span class="text-cyber-rose text-[10px] font-bold">
+                  {{ ind.impossible_travel | length }} speed anomaly event(s)
+                </span>
+
+              </div>
+
+            {% endif %}
+
+
+            {% if ind.device_swaps.handset_hopping %}
+
+              <div class="flex items-center gap-1.5">
+
+                <div class="beacon beacon-amber w-2 h-2"></div>
+
+                <span class="text-cyber-amber text-[10px] font-bold">
+                  Handset hopping ({{ ind.device_swaps.imei_count }} IMEIs)
+                </span>
+
+              </div>
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- COMBINED NETWORK GRAPH                                         -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="glass-card p-5">
+
+    <div class="flex items-center justify-between mb-4">
+
+      <div>
+
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+
+          <i data-lucide="network" class="w-4 h-4 text-cyber-cyan"></i>
+
+          Combined Network Link Analysis
+
+        </h3>
+
+        <p class="text-xs text-slate-500 mt-0.5">
+          Overlaid target networks • Mutual contacts highlighted in
+          <span class="text-cyber-amber font-bold">Amber</span>
+        </p>
+
+      </div>
+
+
+      <button
+        onclick="crossFitGraph()"
+        class="px-3 py-1.5 bg-cyber-surface border border-cyber-border rounded text-xs text-slate-400 hover:text-white flex items-center gap-1.5"
+      >
+        <i data-lucide="maximize-2" class="w-3 h-3"></i>
+        Fit Network
+      </button>
+
+    </div>
+
+
+    <div
+      id="cross-network"
+      class="vis-network-container w-full rounded-xl border border-cyber-border"
+      style="height: 480px;"
+    ></div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 6 — INVESTIGATION ANALYTICS ACCESS                      -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <div class="flex justify-end pt-1 pb-2">
+
+    <a
+      href="{{ url_for('investigation_analytics_view', session_id=session_id) }}"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="group inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-cyber-purple/40 bg-cyber-purple/10 hover:bg-cyber-purple/20 hover:border-cyber-purple/70 text-cyber-purple font-semibold text-xs transition-all duration-200"
+    >
+
+      <i data-lucide="scan-search" class="w-4 h-4"></i>
+
+      Open Investigation Analytics
+
+      <i
+        data-lucide="arrow-up-right"
+        class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+      ></i>
+
+    </a>
+
+  </div>
+
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+
+<script>
+
+const SESSION_ID = "{{ session_id }}";
+
+const LABELS = {{ data.labels | tojson }};
+
+const TARGETS = {{ data.targets | tojson }};
+
+const INDIVIDUALS = {{ data.individuals | tojson }};
+
+const COLORS = [
+  '#38bdf8',
+  '#10b981',
+  '#f59e0b',
+  '#f43f5e',
+  '#818cf8'
+];
+
+const COMMON_CONTACTS = new Set(
+  {{ data.common_contacts | map(attribute='contact') | list | tojson }}
+);
+
+let crossNetwork;
+
+
+// ── Export Menu Toggle ───────────────────────────────────────────────────
+
+function toggleCrossExportMenu() {
+
+  const menu = document.getElementById('cross-export-menu');
+
+  if (menu) {
+    menu.classList.toggle('hidden');
+  }
+
+}
+
+
+function closeCrossExportMenu() {
+
+  const menu = document.getElementById('cross-export-menu');
+
+  if (menu) {
+    menu.classList.add('hidden');
+  }
+
+}
+
+
+function handleCrossExportClick(event, label) {
+
+  closeCrossExportMenu();
+
+  showCrossExportToast(`Downloading ${label}...`);
+
+}
+
+
+function showCrossExportToast(msg) {
+
+  let toast = document.getElementById('cross-export-toast');
+
+  if (!toast) {
+
+    toast = document.createElement('div');
+
+    toast.id = 'cross-export-toast';
+
+    toast.className =
+      'fixed bottom-6 right-6 z-50 px-4 py-3 bg-slate-900/95 border border-cyber-amber/50 text-white rounded-xl shadow-2xl flex items-center gap-3 font-mono text-xs backdrop-blur transition-all duration-300 transform translate-y-10 opacity-0';
+
+    document.body.appendChild(toast);
+
+  }
+
+  toast.innerHTML = `
+    <span class="w-2.5 h-2.5 rounded-full bg-cyber-amber animate-ping"></span>
+    <span>${msg}</span>
+  `;
+
+  toast.classList.remove(
+    'translate-y-10',
+    'opacity-0'
+  );
+
+  setTimeout(() => {
+
+    toast.classList.add(
+      'translate-y-10',
+      'opacity-0'
+    );
+
+  }, 3500);
+
+}
+
+
+window.addEventListener('click', function(e) {
+
+  const wrapper = document.getElementById(
+    'cross-export-wrapper'
+  );
+
+  const menu = document.getElementById(
+    'cross-export-menu'
+  );
+
+  if (
+    wrapper &&
+    menu &&
+    !wrapper.contains(e.target)
+  ) {
+
+    menu.classList.add('hidden');
+
+  }
+
+});
+
+
+// ── 1. KPI Matrix Table ──────────────────────────────────────────────────
+
+function loadKPIMatrix() {
+
+  const metrics = [
+
+    ['total_records', 'Total Records'],
+
+    ['unique_contacts', 'Unique Contacts'],
+
+    ['total_duration_hms', 'Talk Time'],
+
+    ['incoming', 'Incoming Calls'],
+
+    ['outgoing', 'Outgoing Calls'],
+
+    ['sms_count', 'SMS Messages'],
+
+    ['night_calls', 'Night Calls (00–05)'],
+
+    ['imei_count', 'Handsets (IMEI)'],
+
+    ['imsi_count', 'SIM Cards (IMSI)']
+
+  ];
+
+
+  const tbody =
+    document.getElementById('kpi-matrix-body');
+
+
+  if (!tbody) {
+    return;
+  }
+
+
+  tbody.innerHTML = '';
+
+
+  metrics.forEach(([key, label]) => {
+
+    const tr = document.createElement('tr');
+
+    tr.className =
+      'hover:bg-slate-800/30 transition-colors';
+
+
+    let html = `
+      <td class="py-2 pr-4 text-slate-500">
+        ${label}
+      </td>
+    `;
+
+
+    INDIVIDUALS.forEach((ind, i) => {
+
+      const val =
+        ind.kpis
+          ? (ind.kpis[key] ?? '—')
+          : '—';
+
+
+      const isAlert =
+        (
+          key === 'night_calls' &&
+          parseInt(val) > 5
+        ) ||
+        (
+          key === 'imei_count' &&
+          parseInt(val) > 1
+        );
+
+
+      html += `
+        <td
+          class="py-2 pr-4 text-right font-bold ${
+            isAlert
+              ? 'text-cyber-rose'
+              : 'text-white'
+          }"
+        >
+          ${val}
+        </td>
+      `;
+
+    });
+
+
+    tr.innerHTML = html;
+
+    tbody.appendChild(tr);
+
+  });
+
+}
+
+
+// ── 2. 24-Hour Multi-Target Activity Overlay Chart ───────────────────────
+
+function loadHourlyOverlayChart() {
+
+  const hours = Array.from(
+    { length: 24 },
+    (_, i) =>
+      `${String(i).padStart(2, '0')}:00`
+  );
+
+
+  const datasets = INDIVIDUALS.map(
+    (ind, i) => {
+
+      const counts =
+        Array(24).fill(0);
+
+
+      (ind.hourly || []).forEach(h => {
+
+        if (
+          h.hour >= 0 &&
+          h.hour < 24
+        ) {
+
+          counts[h.hour] = h.count;
+
+        }
+
+      });
+
+
+      const c =
+        COLORS[i % COLORS.length];
+
+
+      return {
+
+        label:
+          `T${i + 1}: ${
+            ind.target || LABELS[i]
+          }`,
+
+        data: counts,
+
+        borderColor: c,
+
+        backgroundColor: `${c}15`,
+
+        fill: true,
+
+        tension: 0.35,
+
+        borderWidth: 2,
+
+        pointRadius: 2.5,
+
+        pointHoverRadius: 6
+
+      };
+
+    }
+  );
+
+
+  const canvas =
+    document.getElementById(
+      'chart-compare-hourly'
+    );
+
+
+  if (!canvas) {
+    return;
+  }
+
+
+  const ctx =
+    canvas.getContext('2d');
+
+
+  new Chart(ctx, {
+
+    type: 'line',
+
+    data: {
+      labels: hours,
+      datasets
+    },
+
+    options: {
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+
+      plugins: {
+
+        legend: {
+          position: 'top',
+
+          labels: {
+            boxWidth: 10,
+            font: {
+              size: 10,
+              family: 'JetBrains Mono'
+            }
+          }
+        },
+
+        tooltip: {
+
+          callbacks: {
+
+            title: ctx =>
+              `Hour: ${ctx[0].label}`,
+
+            label: ctx =>
+              ` ${ctx.dataset.label}: ${ctx.raw} calls`
+
+          }
+
+        }
+
+      },
+
+      scales: {
+
+        x: {
+          grid: {
+            color: '#1e293b'
+          },
+
+          ticks: {
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+          }
+        },
+
+        y: {
+          grid: {
+            color: '#1e293b'
+          },
+
+          beginAtZero: true,
+
+          ticks: {
+            precision: 0
+          }
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── 3. Day-of-Week Pattern Radar Comparison ──────────────────────────────
+
+function loadDowRadarChart() {
+
+  const days = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun'
+  ];
+
+
+  const datasets =
+    INDIVIDUALS.map((ind, i) => {
+
+      const counts =
+        Array(7).fill(0);
+
+
+      (ind.dow || []).forEach(d => {
+
+        if (
+          d.day >= 0 &&
+          d.day < 7
+        ) {
+
+          counts[d.day] = d.count;
+
+        }
+
+      });
+
+
+      const c =
+        COLORS[i % COLORS.length];
+
+
+      return {
+
+        label:
+          `T${i + 1}: ${
+            ind.target || LABELS[i]
+          }`,
+
+        data: counts,
+
+        borderColor: c,
+
+        backgroundColor: `${c}25`,
+
+        borderWidth: 2,
+
+        pointBackgroundColor: c,
+
+        pointRadius: 3
+
+      };
+
+    });
+
+
+  const canvas =
+    document.getElementById(
+      'chart-compare-dow'
+    );
+
+
+  if (!canvas) {
+    return;
+  }
+
+
+  const ctx =
+    canvas.getContext('2d');
+
+
+  new Chart(ctx, {
+
+    type: 'radar',
+
+    data: {
+      labels: days,
+      datasets
+    },
+
+    options: {
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      plugins: {
+
+        legend: {
+          position: 'bottom',
+
+          labels: {
+            boxWidth: 8,
+
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+          }
+        }
+
+      },
+
+      scales: {
+
+        r: {
+
+          grid: {
+            color: '#1e293b'
+          },
+
+          angleLines: {
+            color: '#1e293b'
+          },
+
+          pointLabels: {
+            color: '#94a3b8',
+
+            font: {
+              size: 10,
+              family: 'JetBrains Mono'
+            }
+          },
+
+          ticks: {
+            display: false
+          },
+
+          beginAtZero: true
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── 4. Call Direction & Type Grouped Bar Chart ───────────────────────────
+
+function loadTypeComparisonChart() {
+
+  const categories = [
+    'Incoming',
+    'Outgoing',
+    'SMS',
+    'Night Calls'
+  ];
+
+
+  const datasets =
+    INDIVIDUALS.map((ind, i) => {
+
+      const k =
+        ind.kpis || {};
+
+
+      const c =
+        COLORS[i % COLORS.length];
+
+
+      return {
+
+        label:
+          `T${i + 1}: ${
+            ind.target || LABELS[i]
+          }`,
+
+        data: [
+
+          k.incoming || 0,
+
+          k.outgoing || 0,
+
+          k.sms_count || 0,
+
+          k.night_calls || 0
+
+        ],
+
+        backgroundColor:
+          `${c}70`,
+
+        borderColor: c,
+
+        borderWidth: 1.5,
+
+        borderRadius: 4
+
+      };
+
+    });
+
+
+  const canvas =
+    document.getElementById(
+      'chart-compare-types'
+    );
+
+
+  if (!canvas) {
+    return;
+  }
+
+
+  const ctx =
+    canvas.getContext('2d');
+
+
+  new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+      labels: categories,
+      datasets
+    },
+
+    options: {
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      plugins: {
+
+        legend: {
+          position: 'top',
+
+          labels: {
+            boxWidth: 10,
+
+            font: {
+              size: 10,
+              family: 'JetBrains Mono'
+            }
+          }
+        }
+
+      },
+
+      scales: {
+
+        x: {
+          grid: {
+            color: '#1e293b'
+          }
+        },
+
+        y: {
+          grid: {
+            color: '#1e293b'
+          },
+
+          beginAtZero: true
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── 5. Forensic Risk Profiles Radar Chart ────────────────────────────────
+
+function loadRiskRadarChart() {
+
+  const axes = [
+
+    'Night Call Rate',
+
+    'Device Swaps',
+
+    'Speed Anomalies',
+
+    'Contact Diversity',
+
+    'SMS Activity'
+
+  ];
+
+
+  const datasets =
+    INDIVIDUALS.map((ind, i) => {
+
+      const k =
+        ind.kpis || {};
+
+
+      const total =
+        Math.max(
+          k.total_records || 1,
+          1
+        );
+
+
+      const nightRate =
+        Math.min(
+          ((k.night_calls || 0) / total) * 300,
+          100
+        );
+
+
+      const imeiRisk =
+        Math.min(
+          (k.imei_count || 1) * 35,
+          100
+        );
+
+
+      const speedRisk =
+        Math.min(
+          (
+            ind.impossible_travel
+              ? ind.impossible_travel.length
+              : 0
+          ) * 40,
+          100
+        );
+
+
+      const contactDiversity =
+        Math.min(
+          ((k.unique_contacts || 0) / total) * 150,
+          100
+        );
+
+
+      const smsRatio =
+        Math.min(
+          ((k.sms_count || 0) / total) * 200,
+          100
+        );
+
+
+      const c =
+        COLORS[i % COLORS.length];
+
+
+      return {
+
+        label:
+          `T${i + 1}: ${
+            ind.target || LABELS[i]
+          }`,
+
+        data: [
+
+          Math.round(nightRate),
+
+          Math.round(imeiRisk),
+
+          Math.round(speedRisk),
+
+          Math.round(contactDiversity),
+
+          Math.round(smsRatio)
+
+        ],
+
+        borderColor: c,
+
+        backgroundColor:
+          `${c}20`,
+
+        borderWidth: 2,
+
+        pointBackgroundColor: c,
+
+        pointRadius: 3
+
+      };
+
+    });
+
+
+  const canvas =
+    document.getElementById(
+      'chart-compare-risk'
+    );
+
+
+  if (!canvas) {
+    return;
+  }
+
+
+  const ctx =
+    canvas.getContext('2d');
+
+
+  new Chart(ctx, {
+
+    type: 'radar',
+
+    data: {
+      labels: axes,
+      datasets
+    },
+
+    options: {
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      plugins: {
+
+        legend: {
+          position: 'bottom',
+
+          labels: {
+            boxWidth: 8,
+
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+          }
+        }
+
+      },
+
+      scales: {
+
+        r: {
+
+          min: 0,
+
+          max: 100,
+
+          grid: {
+            color: '#1e293b'
+          },
+
+          angleLines: {
+            color: '#1e293b'
+          },
+
+          pointLabels: {
+            color: '#94a3b8',
+
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+          },
+
+          ticks: {
+            display: false
+          }
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── 6. Top Shared Contacts Breakdown ─────────────────────────────────────
+
+function loadSharedBreakdownChart() {
+
+  const common =
+    {{ data.common_contacts | tojson }};
+
+
+  const canvas =
+    document.getElementById(
+      'chart-shared-breakdown'
+    );
+
+
+  if (!canvas) {
+    return;
+  }
+
+
+  const ctx =
+    canvas.getContext('2d');
+
+
+  if (
+    !common ||
+    common.length === 0
+  ) {
+
+    new Chart(ctx, {
+
+      type: 'bar',
+
+      data: {
+
+        labels: [
+          'No Shared Contacts'
+        ],
+
+        datasets: [
+          {
+            data: [0]
+          }
+        ]
+
+      },
+
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+
+    });
+
+    return;
+
+  }
+
+
+  // Top 6 common contacts
+
+  const topCommon =
+    common.slice(0, 6);
+
+
+  const labels =
+    topCommon.map(
+      c => c.contact
+    );
+
+
+  const datasets =
+    INDIVIDUALS.map((ind, i) => {
+
+      const contactMap =
+        new Map();
+
+
+      (ind.top_contacts || []).forEach(tc => {
+
+        contactMap.set(
+          tc.contact,
+          tc.count
+        );
+
+      });
+
+
+      // Also scan records if top_contacts is truncated
+
+      (ind.records || []).forEach(r => {
+
+        const other =
+          r.caller === ind.target
+            ? r.receiver
+            : r.caller;
+
+
+        if (
+          COMMON_CONTACTS.has(other) &&
+          !contactMap.has(other)
+        ) {
+
+          contactMap.set(
+            other,
+            (contactMap.get(other) || 0) + 1
+          );
+
+        }
+
+      });
+
+
+      const data =
+        topCommon.map(
+          c =>
+            contactMap.get(c.contact) || 1
+        );
+
+
+      const col =
+        COLORS[i % COLORS.length];
+
+
+      return {
+
+        label:
+          `T${i + 1}: ${
+            ind.target || LABELS[i]
+          }`,
+
+        data,
+
+        backgroundColor:
+          `${col}80`,
+
+        borderColor: col,
+
+        borderWidth: 1,
+
+        borderRadius: 3
+
+      };
+
+    });
+
+
+  new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+      labels,
+      datasets
+    },
+
+    options: {
+
+      indexAxis: 'y',
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      plugins: {
+
+        legend: {
+          position: 'top',
+
+          labels: {
+            boxWidth: 8,
+
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+          }
+        }
+
+      },
+
+      scales: {
+
+        x: {
+          grid: {
+            color: '#1e293b'
+          },
+
+          beginAtZero: true
+
+        },
+
+        y: {
+
+          grid: {
+            color: '#1e293b'
+          },
+
+          ticks: {
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+          }
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── 7. Matrix Chart ──────────────────────────────────────────────────────
+
+function loadMatrixChart() {
+
+  const matrix =
+    {{ data.matrix | tojson }};
+
+
+  const labels =
+    matrix.labels || [];
+
+
+  if (labels.length === 0) {
+    return;
+  }
+
+
+  const datasets =
+    labels.map((lbl, i) => ({
+
+      label: lbl,
+
+      data:
+        matrix.matrix[i]?.values || [],
+
+      backgroundColor:
+        `${COLORS[i % COLORS.length]}60`,
+
+      borderColor:
+        COLORS[i % COLORS.length],
+
+      borderWidth: 1.5,
+
+      borderRadius: 3
+
+    }));
+
+
+  const canvas =
+    document.getElementById(
+      'chart-matrix'
+    );
+
+
+  if (!canvas) {
+    return;
+  }
+
+
+  const ctx =
+    canvas.getContext('2d');
+
+
+  new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+      labels,
+      datasets
+    },
+
+    options: {
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      plugins: {
+
+        legend: {
+
+          position: 'bottom',
+
+          labels: {
+
+            boxWidth: 8,
+
+            font: {
+              size: 9,
+              family: 'JetBrains Mono'
+            }
+
+          }
+
+        },
+
+        tooltip: {
+
+          callbacks: {
+
+            label: ctx =>
+              ` ${ctx.dataset.label}: ${ctx.raw} shared contacts`
+
+          }
+
+        }
+
+      },
+
+      scales: {
+
+        x: {
+          grid: {
+            color: '#1e293b'
+          }
+        },
+
+        y: {
+
+          grid: {
+            color: '#1e293b'
+          },
+
+          beginAtZero: true,
+
+          ticks: {
+            precision: 0
+          }
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ── 8. Combined Network Graph ────────────────────────────────────────────
+
+function loadCrossGraph() {
+
+  const allNodes =
+    new Map();
+
+
+  const allEdges =
+    [];
+
+
+  const targetSet =
+    new Set(TARGETS);
+
+
+  INDIVIDUALS.forEach((ind, i) => {
+
+    const graphData =
+      ind.graph || {};
+
+
+    (graphData.nodes || []).forEach(node => {
+
+      if (!allNodes.has(node.id)) {
+
+        const isMutual =
+          COMMON_CONTACTS.has(node.id);
+
+
+        const isTarget =
+          targetSet.has(node.id);
+
+
+        allNodes.set(
+          node.id,
+          {
+
+            ...node,
+
+            color: {
+
+              background:
+                isTarget
+                  ? COLORS[i % COLORS.length]
+                  : isMutual
+                    ? '#f59e0b'
+                    : '#334155',
+
+              border:
+                isTarget
+                  ? COLORS[i % COLORS.length]
+                  : (
+                      isMutual
+                        ? '#f59e0b'
+                        : '#475569'
+                    ),
+
+              highlight: {
+                background: '#f59e0b',
+                border: '#f59e0b'
+              }
+
+            },
+
+            title:
+              `${node.id}${
+                isMutual
+                  ? ' ⭐ MUTUAL CONTACT'
+                  : ''
+              }${
+                isTarget
+                  ? ` 🎯 TARGET T${i + 1}`
+                  : ''
+              }`,
+
+            borderWidth:
+              isTarget
+                ? 3
+                : (
+                    isMutual
+                      ? 2.5
+                      : 1
+                  ),
+
+            size:
+              isTarget
+                ? 28
+                : (
+                    isMutual
+                      ? 18
+                      : 10
+                  )
+
+          }
+        );
+
+      }
+
+    });
+
+
+    (graphData.edges || []).forEach(edge => {
+
+      allEdges.push({
+
+        ...edge,
+
+        color: {
+
+          color:
+            `${COLORS[i % COLORS.length]}50`,
+
+          highlight:
+            COLORS[i % COLORS.length]
+
+        }
+
+      });
+
+    });
+
+  });
+
+
+  const container =
+    document.getElementById(
+      'cross-network'
+    );
+
+
+  if (!container) {
+    return;
+  }
+
+
+  if (
+    typeof vis === 'undefined' ||
+    !vis.DataSet ||
+    !vis.Network
+  ) {
+
+    console.warn(
+      'vis-network is not available.'
+    );
+
+    return;
+
+  }
+
+
+  const nodes =
+    new vis.DataSet(
+      [...allNodes.values()]
+    );
+
+
+  const edges =
+    new vis.DataSet(
+      allEdges
+    );
+
+
+  crossNetwork =
+    new vis.Network(
+
+      container,
+
+      {
+        nodes,
+        edges
+      },
+
+      {
+
+        physics: {
+
+          enabled: true,
+
+          stabilization: {
+            iterations: 70
+          },
+
+          barnesHut: {
+            gravitationalConstant: -2200
+          }
+
+        },
+
+        interaction: {
+
+          hover: true,
+
+          tooltipDelay: 100,
+
+          zoomView: true
+
+        },
+
+        nodes: {
+
+          shape: 'dot',
+
+          borderWidth: 2
+
+        },
+
+        edges: {
+
+          smooth: {
+            type: 'curvedCW',
+            roundness: 0.1
+          },
+
+          arrows: 'to'
+
+        },
+
+        layout: {
+
+          improvedLayout:
+            allNodes.size < 80
+
+        }
+
+      }
+
+    );
+
+}
+
+
+// ── 9. Co-location Map ───────────────────────────────────────────────────
+
+function loadColocMap() {
+
+  const colocEvents =
+    {{ data.colocation | tojson }};
+
+
+  const mapEl =
+    document.getElementById(
+      'cross-map'
+    );
+
+
+  if (
+    !mapEl ||
+    colocEvents.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  if (typeof L === 'undefined') {
+
+    console.warn(
+      'Leaflet is not available.'
+    );
+
+    return;
+
+  }
+
+
+  const validEvents =
+    colocEvents.filter(
+      e => e.lat && e.lon
+    );
+
+
+  if (validEvents.length === 0) {
+    return;
+  }
+
+
+  const center = [
+
+    validEvents.reduce(
+      (s, e) => s + e.lat,
+      0
+    ) / validEvents.length,
+
+    validEvents.reduce(
+      (s, e) => s + e.lon,
+      0
+    ) / validEvents.length
+
+  ];
+
+
+  const map =
+    L.map(
+      'cross-map',
+      {
+
+        center,
+
+        zoom: 11,
+
+        preferCanvas: true,
+
+        zoomSnap: 0.25,
+
+        zoomDelta: 0.5,
+
+        wheelPxPerZoomLevel: 120,
+
+        wheelDebounceTime: 40,
+
+        fadeAnimation: true,
+
+        zoomAnimation: true,
+
+        markerZoomAnimation: true,
+
+        inertia: true,
+
+        inertiaDeceleration: 2500,
+
+        inertiaMaxSpeed: 1400,
+
+        easeLinearity: 0.2
+
+      }
+    );
+
+
+  L.tileLayer(
+
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+
+    {
+
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+
+      maxZoom: 20,
+
+      subdomains: 'abcd',
+
+      updateWhenZooming: false,
+
+      updateWhenIdle: true,
+
+      keepBuffer: 6
+
+    }
+
+  ).addTo(map);
+
+
+  const bounds =
+    [];
+
+
+  validEvents.forEach(event => {
+
+    bounds.push([
+      event.lat,
+      event.lon
+    ]);
+
+
+    const severity =
+      event.diff_minutes < 5
+        ? '#f43f5e'
+        : '#f59e0b';
+
+
+    const marker =
+      L.circleMarker(
+
+        [
+          event.lat,
+          event.lon
+        ],
+
+        {
+
+          radius: 9,
+
+          fillColor: severity,
+
+          color: '#ffffff',
+
+          weight: 1.5,
+
+          opacity: 0.9,
+
+          fillOpacity: 0.85
+
+        }
+
+      );
+
+
+    marker.bindPopup(
+
+      `
+        <div style="font-family:monospace;font-size:11px;">
+
+          <div style="color:#f59e0b;font-weight:bold;margin-bottom:4px;">
+            ⚠ Co-location Alert
+          </div>
+
+          <div>
+            🗼 Tower: ${event.cell_id}
+          </div>
+
+          <div>
+            👤 ${event.target_a} at ${
+              event.time_a
+                ? event.time_a.substring(0, 16)
+                : '?'
+            }
+          </div>
+
+          <div>
+            👤 ${event.target_b} at ${
+              event.time_b
+                ? event.time_b.substring(0, 16)
+                : '?'
+            }
+          </div>
+
+          <div style="color:#f43f5e;margin-top:4px;">
+            Δ ${event.diff_minutes} minutes apart
+          </div>
+
+        </div>
+      `,
+
+      {
+        className: 'dark-popup'
+      }
+
+    );
+
+
+    marker.addTo(map);
+
+  });
+
+
+  if (bounds.length > 1) {
+
+    map.fitBounds(
+
+      bounds,
+
+      {
+
+        padding: [
+          40,
+          40
+        ],
+
+        maxZoom: 15,
+
+        animate: true,
+
+        duration: 0.8
+
+      }
+
+    );
+
+  }
+
+}
+
+
+// ── Network Graph Fit ────────────────────────────────────────────────────
+
+function crossFitGraph() {
+
+  if (crossNetwork) {
+
+    crossNetwork.fit({
+      animation: {
+        duration: 500
+      }
+    });
+
+  }
+
+}
+
+
+// ── Bootstrap ────────────────────────────────────────────────────────────
+
+document.addEventListener(
+  'DOMContentLoaded',
+  () => {
+
+    if (
+      typeof lucide !== 'undefined'
+    ) {
+      lucide.createIcons();
+    }
+
+
+    loadKPIMatrix();
+
+    loadHourlyOverlayChart();
+
+    loadDowRadarChart();
+
+    loadTypeComparisonChart();
+
+    loadRiskRadarChart();
+
+    loadSharedBreakdownChart();
+
+    loadMatrixChart();
+
+    loadCrossGraph();
+
+    loadColocMap();
+
+  }
+);
+
+</script>
+
+{% endblock %}

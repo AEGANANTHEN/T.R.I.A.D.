@@ -1,0 +1,1350 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Security Validation — TRIAD
+{% endblock %}
+
+{% block content %}
+
+<div class="space-y-6">
+
+    <!-- ========================================================= -->
+    <!-- HEADER                                                    -->
+    <!-- ========================================================= -->
+
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+
+        <div>
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-11 h-11 rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm">
+
+                    <i
+                        data-lucide="shield-check"
+                        class="w-5 h-5 text-white"
+                    ></i>
+
+                </div>
+
+                <div>
+
+                    <div class="flex items-center gap-2">
+
+                        <h1 class="text-2xl font-bold text-white">
+                            Security Validation
+                        </h1>
+
+                    </div>
+
+                    <p class="text-sm text-slate-500 mt-1">
+                        Validate TRIAD's forensic security controls without modifying evidence.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <button
+            id="run-validation-btn"
+            type="button"
+            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition"
+        >
+
+            <i
+                data-lucide="scan-search"
+                class="w-4 h-4"
+            ></i>
+
+            Run Validation
+
+        </button>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- SECURITY NOTICE                                           -->
+    <!-- ========================================================= -->
+
+    <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+
+        <div class="flex items-start gap-3">
+
+            <i
+                data-lucide="info"
+                class="w-5 h-5 text-blue-600 mt-0.5"
+            ></i>
+
+            <div>
+
+                <h3 class="font-semibold text-blue-900 text-sm">
+                    Non-Destructive Security Validation
+                </h3>
+
+                <p class="text-xs text-blue-800 mt-1 leading-5">
+                    The security validation engine validates cryptography, hashing, authentication,
+                    role-based access control, evidence integrity metadata,
+                    Chain of Custody schema and deployment security posture.
+                    The validation process does not alter original evidence.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- OVERALL SCORE                                            -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm">
+
+        <div class="p-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+                <div class="rounded-xl bg-slate-900 text-white p-5">
+
+                    <div class="flex items-center justify-between">
+
+                        <span class="text-xs uppercase tracking-wider text-slate-300">
+                            Overall
+                        </span>
+
+                        <i
+                            data-lucide="shield"
+                            class="w-5 h-5 text-slate-300"
+                        ></i>
+
+                    </div>
+
+                    <div
+                        id="overall-status"
+                        class="text-2xl font-bold mt-3"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+
+                <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-5">
+
+                    <div class="flex items-center justify-between">
+
+                        <span class="text-xs uppercase tracking-wider text-emerald-700">
+                            Passed
+                        </span>
+
+                        <i
+                            data-lucide="circle-check"
+                            class="w-5 h-5 text-emerald-600"
+                        ></i>
+
+                    </div>
+
+                    <div
+                        id="passed-count"
+                        class="text-2xl font-bold text-emerald-900 mt-3"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+
+                <div class="rounded-xl bg-amber-50 border border-amber-200 p-5">
+
+                    <div class="flex items-center justify-between">
+
+                        <span class="text-xs uppercase tracking-wider text-amber-700">
+                            Warnings
+                        </span>
+
+                        <i
+                            data-lucide="triangle-alert"
+                            class="w-5 h-5 text-amber-600"
+                        ></i>
+
+                    </div>
+
+                    <div
+                        id="warning-count"
+                        class="text-2xl font-bold text-amber-900 mt-3"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+
+                <div class="rounded-xl bg-red-50 border border-red-200 p-5">
+
+                    <div class="flex items-center justify-between">
+
+                        <span class="text-xs uppercase tracking-wider text-red-700">
+                            Failed
+                        </span>
+
+                        <i
+                            data-lucide="circle-x"
+                            class="w-5 h-5 text-red-600"
+                        ></i>
+
+                    </div>
+
+                    <div
+                        id="failed-count"
+                        class="text-2xl font-bold text-red-900 mt-3"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="mt-5">
+
+                <div class="flex items-center justify-between mb-2">
+
+                    <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Security Control Score
+                    </span>
+
+                    <span
+                        id="security-score"
+                        class="text-sm font-bold text-slate-900"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+                <div class="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
+
+                    <div
+                        id="security-score-bar"
+                        class="h-full rounded-full transition-all duration-500"
+                        style="width: 0%;"
+                    ></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- VALIDATION STATUS                                        -->
+    <!-- ========================================================= -->
+
+    <div
+        id="validation-message"
+        class="hidden rounded-xl border p-4"
+    >
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- CONTROL CHECKS                                           -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+
+                    <i
+                        data-lucide="list-checks"
+                        class="w-5 h-5 text-slate-600"
+                    ></i>
+
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        Security Control Checks
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Results from the security validation engine.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="checks-container"
+            class="divide-y divide-slate-100"
+        >
+
+            <div class="px-6 py-12 text-center">
+
+                <i
+                    data-lucide="shield-question"
+                    class="w-10 h-10 text-slate-300 mx-auto"
+                ></i>
+
+                <p class="text-sm font-semibold text-slate-600 mt-3">
+                    Validation has not been run
+                </p>
+
+                <p class="text-xs text-slate-400 mt-1">
+                    Click "Run Validation" to check TRIAD's security controls.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- LIVE EVIDENCE INTEGRITY                                  -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+
+                    <i
+                        data-lucide="fingerprint"
+                        class="w-5 h-5 text-emerald-600"
+                    ></i>
+
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        Live Evidence Integrity Sample
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Sampled encrypted evidence objects verified by the DEMS integrity sentinel.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <div class="rounded-xl bg-slate-50 border border-slate-200 p-5">
+
+                    <div class="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                        Checked
+                    </div>
+
+                    <div
+                        id="integrity-checked"
+                        class="text-2xl font-bold text-slate-900 mt-2"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+
+                <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-5">
+
+                    <div class="text-xs uppercase tracking-wide text-emerald-700 font-semibold">
+                        Passed
+                    </div>
+
+                    <div
+                        id="integrity-passed"
+                        class="text-2xl font-bold text-emerald-900 mt-2"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+
+                <div class="rounded-xl bg-red-50 border border-red-200 p-5">
+
+                    <div class="text-xs uppercase tracking-wide text-red-700 font-semibold">
+                        Failed
+                    </div>
+
+                    <div
+                        id="integrity-failed"
+                        class="text-2xl font-bold text-red-900 mt-2"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="integrity-details"
+                class="mt-4 hidden rounded-lg border border-red-200 bg-red-50 p-4"
+            >
+
+                <div class="flex items-center gap-2">
+
+                    <i
+                        data-lucide="triangle-alert"
+                        class="w-4 h-4 text-red-600"
+                    ></i>
+
+                    <span class="text-sm font-semibold text-red-900">
+                        Integrity Exceptions
+                    </span>
+
+                </div>
+
+                <ul
+                    id="integrity-detail-list"
+                    class="mt-2 space-y-1 text-xs text-red-800 list-disc pl-5"
+                ></ul>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- SECURITY ARCHITECTURE                                    -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+
+                    <i
+                        data-lucide="lock-keyhole"
+                        class="w-5 h-5 text-blue-600"
+                    ></i>
+
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        TRIAD Security Architecture
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Core forensic controls preserved.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+                <div class="rounded-xl border border-slate-200 p-5">
+
+                    <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+
+                        <i
+                            data-lucide="key-round"
+                            class="w-5 h-5 text-blue-600"
+                        ></i>
+
+                    </div>
+
+                    <h3 class="font-semibold text-slate-900 text-sm mt-4">
+                        AES-256-GCM
+                    </h3>
+
+                    <p class="text-xs text-slate-500 mt-1 leading-5">
+                        Authenticated encryption protects vault evidence.
+                    </p>
+
+                </div>
+
+
+                <div class="rounded-xl border border-slate-200 p-5">
+
+                    <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+
+                        <i
+                            data-lucide="fingerprint"
+                            class="w-5 h-5 text-emerald-600"
+                        ></i>
+
+                    </div>
+
+                    <h3 class="font-semibold text-slate-900 text-sm mt-4">
+                        Cryptographic Hashing
+                    </h3>
+
+                    <p class="text-xs text-slate-500 mt-1 leading-5">
+                        SHA-256, SHA-512 and MD5 intake fingerprints support integrity validation.
+                    </p>
+
+                </div>
+
+
+                <div class="rounded-xl border border-slate-200 p-5">
+
+                    <div class="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center">
+
+                        <i
+                            data-lucide="users-round"
+                            class="w-5 h-5 text-violet-600"
+                        ></i>
+
+                    </div>
+
+                    <h3 class="font-semibold text-slate-900 text-sm mt-4">
+                        RBAC
+                    </h3>
+
+                    <p class="text-xs text-slate-500 mt-1 leading-5">
+                        Role-based permissions restrict protected forensic operations.
+                    </p>
+
+                </div>
+
+
+                <div class="rounded-xl border border-slate-200 p-5">
+
+                    <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+
+                        <i
+                            data-lucide="history"
+                            class="w-5 h-5 text-amber-600"
+                        ></i>
+
+                    </div>
+
+                    <h3 class="font-semibold text-slate-900 text-sm mt-4">
+                        Chain of Custody
+                    </h3>
+
+                    <p class="text-xs text-slate-500 mt-1 leading-5">
+                        Evidence actions are associated with authenticated actors and audit metadata.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- DEPLOYMENT WARNINGS                                      -->
+    <!-- ========================================================= -->
+
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm">
+
+        <div class="px-6 py-5 border-b border-slate-200">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+
+                    <i
+                        data-lucide="server-cog"
+                        class="w-5 h-5 text-amber-600"
+                    ></i>
+
+                </div>
+
+                <div>
+
+                    <h2 class="font-bold text-slate-900">
+                        Deployment Security
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Development warnings are intentionally surfaced instead of hidden.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="p-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="flex items-center gap-2">
+
+                        <i
+                            data-lucide="key-square"
+                            class="w-4 h-4 text-slate-500"
+                        ></i>
+
+                        <span class="text-sm font-semibold text-slate-800">
+                            SECRET_KEY
+                        </span>
+
+                    </div>
+
+                    <p class="text-xs text-slate-500 mt-2">
+                        Production deployments should provide a strong secret through environment configuration.
+                    </p>
+
+                </div>
+
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="flex items-center gap-2">
+
+                        <i
+                            data-lucide="bug-off"
+                            class="w-4 h-4 text-slate-500"
+                        ></i>
+
+                        <span class="text-sm font-semibold text-slate-800">
+                            Debug Mode
+                        </span>
+
+                    </div>
+
+                    <p class="text-xs text-slate-500 mt-2">
+                        Flask debug mode should remain disabled in production.
+                    </p>
+
+                </div>
+
+
+                <div class="rounded-lg border border-slate-200 p-4">
+
+                    <div class="flex items-center gap-2">
+
+                        <i
+                            data-lucide="cookie"
+                            class="w-4 h-4 text-slate-500"
+                        ></i>
+
+                        <span class="text-sm font-semibold text-slate-800">
+                            Secure Cookies
+                        </span>
+
+                    </div>
+
+                    <p class="text-xs text-slate-500 mt-2">
+                        HTTPS deployments should enable secure session cookies.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- FOOTER                                                    -->
+    <!-- ========================================================= -->
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+        <div class="text-xs text-slate-400">
+            TRIAD • Non-destructive security validation
+        </div>
+
+        <div class="flex items-center gap-2 text-xs text-slate-400">
+
+            <i
+                data-lucide="shield-check"
+                class="w-4 h-4"
+            ></i>
+
+            Evidence-preserving workflow
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+
+<script>
+
+(function () {
+
+    "use strict";
+
+
+    const runButton =
+        document.getElementById(
+            "run-validation-btn"
+        );
+
+    const overallStatus =
+        document.getElementById(
+            "overall-status"
+        );
+
+    const passedCount =
+        document.getElementById(
+            "passed-count"
+        );
+
+    const warningCount =
+        document.getElementById(
+            "warning-count"
+        );
+
+    const failedCount =
+        document.getElementById(
+            "failed-count"
+        );
+
+    const securityScore =
+        document.getElementById(
+            "security-score"
+        );
+
+    const securityScoreBar =
+        document.getElementById(
+            "security-score-bar"
+        );
+
+    const checksContainer =
+        document.getElementById(
+            "checks-container"
+        );
+
+    const validationMessage =
+        document.getElementById(
+            "validation-message"
+        );
+
+    const integrityChecked =
+        document.getElementById(
+            "integrity-checked"
+        );
+
+    const integrityPassed =
+        document.getElementById(
+            "integrity-passed"
+        );
+
+    const integrityFailed =
+        document.getElementById(
+            "integrity-failed"
+        );
+
+    const integrityDetails =
+        document.getElementById(
+            "integrity-details"
+        );
+
+    const integrityDetailList =
+        document.getElementById(
+            "integrity-detail-list"
+        );
+
+
+    function escapeHtml(value) {
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+        div.textContent =
+            value === null ||
+            value === undefined
+                ? ""
+                : String(value);
+
+        return div.innerHTML;
+
+    }
+
+
+    function statusBadge(status) {
+
+        const normalized =
+            String(
+                status || ""
+            ).toUpperCase();
+
+
+        if (
+            normalized ===
+            "PASS"
+        ) {
+
+            return `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <i data-lucide="circle-check" class="w-3.5 h-3.5"></i>
+                    PASS
+                </span>
+            `;
+
+        }
+
+
+        if (
+            normalized ===
+            "WARN"
+        ) {
+
+            return `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    <i data-lucide="triangle-alert" class="w-3.5 h-3.5"></i>
+                    WARN
+                </span>
+            `;
+
+        }
+
+
+        return `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                <i data-lucide="circle-x" class="w-3.5 h-3.5"></i>
+                FAIL
+            </span>
+        `;
+
+    }
+
+
+    function renderChecks(checks) {
+
+        if (
+            !Array.isArray(
+                checks
+            )
+            ||
+            checks.length === 0
+        ) {
+
+            checksContainer.innerHTML = `
+                <div class="px-6 py-12 text-center text-sm text-slate-400">
+                    No validation checks were returned.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        checksContainer.innerHTML =
+            checks.map(
+                function (check) {
+
+                    const status =
+                        String(
+                            check.status || ""
+                        ).toUpperCase();
+
+
+                    const icon =
+                        status === "PASS"
+                            ? "circle-check"
+                            : status === "WARN"
+                                ? "triangle-alert"
+                                : "circle-x";
+
+
+                    return `
+                        <div class="px-6 py-5 hover:bg-slate-50 transition">
+
+                            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+
+                                <div class="flex items-start gap-3">
+
+                                    <div class="w-9 h-9 rounded-lg ${
+                                        status === "PASS"
+                                            ? "bg-emerald-50"
+                                            : status === "WARN"
+                                                ? "bg-amber-50"
+                                                : "bg-red-50"
+                                    } flex items-center justify-center flex-shrink-0">
+
+                                        <i
+                                            data-lucide="${icon}"
+                                            class="w-5 h-5 ${
+                                                status === "PASS"
+                                                    ? "text-emerald-600"
+                                                    : status === "WARN"
+                                                        ? "text-amber-600"
+                                                        : "text-red-600"
+                                            }"
+                                        ></i>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <div class="font-semibold text-slate-900 text-sm">
+                                            ${escapeHtml(check.name || "Security check")}
+                                        </div>
+
+                                        <div class="text-xs text-slate-500 mt-1 leading-5">
+                                            ${escapeHtml(check.detail || "No additional details.")}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="flex-shrink-0">
+                                    ${statusBadge(status)}
+                                </div>
+
+                            </div>
+
+                        </div>
+                    `;
+
+                }
+            ).join("");
+
+
+        if (
+            window.lucide
+        ) {
+
+            window.lucide.createIcons();
+
+        }
+
+    }
+
+
+    function showMessage(
+        type,
+        title,
+        detail
+    ) {
+
+        validationMessage.className =
+            "rounded-xl border p-4 " +
+            (
+                type === "success"
+                    ? "border-emerald-200 bg-emerald-50"
+                    : type === "warning"
+                        ? "border-amber-200 bg-amber-50"
+                        : "border-red-200 bg-red-50"
+            );
+
+
+        validationMessage.innerHTML = `
+
+            <div class="flex items-start gap-3">
+
+                <i
+                    data-lucide="${
+                        type === "success"
+                            ? "circle-check"
+                            : type === "warning"
+                                ? "triangle-alert"
+                                : "circle-x"
+                    }"
+                    class="w-5 h-5 ${
+                        type === "success"
+                            ? "text-emerald-600"
+                            : type === "warning"
+                                ? "text-amber-600"
+                                : "text-red-600"
+                    } mt-0.5"
+                ></i>
+
+                <div>
+
+                    <div class="font-semibold text-sm ${
+                        type === "success"
+                            ? "text-emerald-900"
+                            : type === "warning"
+                                ? "text-amber-900"
+                                : "text-red-900"
+                    }">
+
+                        ${escapeHtml(title)}
+
+                    </div>
+
+                    <div class="text-xs mt-1 ${
+                        type === "success"
+                            ? "text-emerald-700"
+                            : type === "warning"
+                                ? "text-amber-700"
+                                : "text-red-700"
+                    }">
+
+                        ${escapeHtml(detail)}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+
+        validationMessage.classList.remove(
+            "hidden"
+        );
+
+
+        if (
+            window.lucide
+        ) {
+
+            window.lucide.createIcons();
+
+        }
+
+    }
+
+
+    function updateIntegrity(
+        integrity
+    ) {
+
+        integrity =
+            integrity || {};
+
+
+        integrityChecked.textContent =
+            integrity.checked ?? 0;
+
+        integrityPassed.textContent =
+            integrity.passed ?? 0;
+
+        integrityFailed.textContent =
+            integrity.failed ?? 0;
+
+
+        const details =
+            Array.isArray(
+                integrity.details
+            )
+                ? integrity.details
+                : [];
+
+
+        if (
+            details.length === 0
+        ) {
+
+            integrityDetails.classList.add(
+                "hidden"
+            );
+
+            integrityDetailList.innerHTML =
+                "";
+
+            return;
+
+        }
+
+
+        integrityDetails.classList.remove(
+            "hidden"
+        );
+
+
+        integrityDetailList.innerHTML =
+            details.map(
+                function (item) {
+
+                    return `
+                        <li>
+                            ${escapeHtml(item)}
+                        </li>
+                    `;
+
+                }
+            ).join("");
+
+    }
+
+
+    async function runValidation() {
+
+        runButton.disabled = true;
+
+        runButton.classList.add(
+            "opacity-60",
+            "cursor-not-allowed"
+        );
+
+
+        runButton.innerHTML = `
+            <i
+                data-lucide="loader-circle"
+                class="w-4 h-4 animate-spin"
+            ></i>
+            Validating...
+        `;
+
+
+        if (
+            window.lucide
+        ) {
+
+            window.lucide.createIcons();
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/security-validation",
+                    {
+                        method: "GET",
+                        headers: {
+                            "Accept":
+                                "application/json"
+                        },
+                        cache: "no-store"
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if (
+                !response.ok
+            ) {
+
+                throw new Error(
+                    result.error ||
+                    "Security validation request failed."
+                );
+
+            }
+
+
+            overallStatus.textContent =
+                result.overall ||
+                "—";
+
+
+            passedCount.textContent =
+                result.passed ??
+                0;
+
+
+            warningCount.textContent =
+                result.warnings ??
+                0;
+
+
+            failedCount.textContent =
+                result.failed ??
+                0;
+
+
+            const score =
+                Number(
+                    result.score || 0
+                );
+
+
+            securityScore.textContent =
+                score.toFixed(1)
+                + "%";
+
+
+            securityScoreBar.style.width =
+                Math.max(
+                    0,
+                    Math.min(
+                        100,
+                        score
+                    )
+                )
+                + "%";
+
+
+            if (
+                result.overall ===
+                "PASS"
+            ) {
+
+                securityScoreBar.className =
+                    "h-full rounded-full transition-all duration-500 bg-emerald-500";
+
+                showMessage(
+                    "success",
+                    "Security validation passed",
+                    "All evaluated controls passed without detected failures."
+                );
+
+            }
+            else if (
+                result.overall ===
+                "WARN"
+            ) {
+
+                securityScoreBar.className =
+                    "h-full rounded-full transition-all duration-500 bg-amber-500";
+
+                showMessage(
+                    "warning",
+                    "Security validation completed with warnings",
+                    "The system passed its hard security checks but surfaced deployment warnings."
+                );
+
+            }
+            else {
+
+                securityScoreBar.className =
+                    "h-full rounded-full transition-all duration-500 bg-red-500";
+
+                showMessage(
+                    "error",
+                    "Security validation detected failures",
+                    "Review the failed controls before treating the deployment as production-ready."
+                );
+
+            }
+
+
+            renderChecks(
+                result.checks
+            );
+
+
+            updateIntegrity(
+                result.integrity_sample
+            );
+
+
+        }
+        catch (error) {
+
+            console.error(
+                "TRIAD security validation error:",
+                error
+            );
+
+
+            showMessage(
+                "error",
+                "Validation request failed",
+                error.message ||
+                "Unable to contact the security validation endpoint."
+            );
+
+        }
+        finally {
+
+            runButton.disabled =
+                false;
+
+            runButton.classList.remove(
+                "opacity-60",
+                "cursor-not-allowed"
+            );
+
+
+            runButton.innerHTML = `
+                <i
+                    data-lucide="scan-search"
+                    class="w-4 h-4"
+                ></i>
+                Run Validation
+            `;
+
+
+            if (
+                window.lucide
+            ) {
+
+                window.lucide.createIcons();
+
+            }
+
+        }
+
+    }
+
+
+    runButton.addEventListener(
+        "click",
+        runValidation
+    );
+
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            if (
+                window.lucide
+            ) {
+
+                window.lucide.createIcons();
+
+            }
+
+        }
+    );
+
+})();
+
+</script>
+
+{% endblock %}

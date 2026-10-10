@@ -1,0 +1,3372 @@
+{% extends "layout.html" %}
+
+{% block title %}Live Intelligence — T.R.I.A.D.{% endblock %}
+
+{% block content %}
+
+<div class="max-w-[1900px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+
+  <!-- ================================================================ -->
+  <!-- HEADER -->
+  <!-- ================================================================ -->
+
+  <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+
+    <div>
+
+      <div class="flex items-center gap-2 mb-1">
+
+        <span class="text-[10px] text-muted tracking-wider">
+          LIVE INTELLIGENCE VISUALIZATION
+        </span>
+
+      </div>
+
+      <h1 class="text-xl sm:text-2xl font-semibold text-tx">
+        Live Intelligence Dashboard
+      </h1>
+
+      <p class="text-sm text-muted mt-1">
+        Interactive visualization of the live intelligence replay.
+        Charts, geographic activity and communication relationships update
+        as events arrive.
+      </p>
+
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- CONTROLS -->
+    <!-- ============================================================ -->
+
+    <div class="flex flex-wrap items-center gap-2">
+
+      <!-- ========================================================== -->
+      <!-- CUSTOM SPEED DROPDOWN -->
+      <!-- ========================================================== -->
+
+      <div
+        id="speedDropdown"
+        class="relative w-[170px]"
+      >
+
+        <!-- Hidden value holder.
+             Existing replayConfig() continues to use this. -->
+        <select
+          id="speedSelect"
+          class="hidden"
+          aria-hidden="true"
+          tabindex="-1"
+        >
+          <option value="1">1× Normal</option>
+          <option value="2">2× Fast</option>
+          <option value="5" selected>5× Rapid</option>
+        </select>
+
+
+        <!-- DROPDOWN BUTTON -->
+
+        <button
+          id="speedDropdownBtn"
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded="false"
+          class="w-full h-[46px]
+                 inline-flex items-center justify-between gap-2
+                 bg-[#171717] border border-[#303030]
+                 rounded-[10px]
+                 px-4
+                 text-[14px] text-[#f5f5f5] font-semibold
+                 hover:border-[#3b82f6]/70
+                 focus:outline-none
+                 focus:border-[#3b82f6]
+                 focus:ring-1 focus:ring-[#3b82f6]/30
+                 transition-all duration-150"
+        >
+
+          <span
+            id="speedDropdownLabel"
+            class="truncate"
+          >
+            5× Rapid
+          </span>
+
+          <i
+            id="speedDropdownChevron"
+            data-lucide="chevron-down"
+            class="w-4 h-4 flex-shrink-0 text-[#9ca3af]
+                   transition-transform duration-150"
+          ></i>
+
+        </button>
+
+
+        <!-- CUSTOM DROPDOWN MENU -->
+
+        <div
+          id="speedDropdownMenu"
+          role="listbox"
+          aria-label="Replay speed"
+          class="hidden absolute z-[9999]
+                 top-[calc(100%+6px)] left-0
+                 w-full
+                 overflow-hidden
+                 rounded-[10px]
+                 border border-[#303030]
+                 bg-[#171717]
+                 shadow-[0_12px_35px_rgba(0,0,0,0.55)]"
+        >
+
+          <button
+            type="button"
+            role="option"
+            data-speed="1"
+            class="speed-option w-full
+                   flex items-center justify-between
+                   px-4 py-2.5
+                   text-left text-[13px] font-medium
+                   text-[#d4d4d4]
+                   hover:bg-white/[0.06]
+                   transition-colors duration-100"
+          >
+
+            <span>
+              1× Normal
+            </span>
+
+            <i
+              data-lucide="check"
+              class="speed-check w-3.5 h-3.5 hidden"
+            ></i>
+
+          </button>
+
+
+          <button
+            type="button"
+            role="option"
+            data-speed="2"
+            class="speed-option w-full
+                   flex items-center justify-between
+                   px-4 py-2.5
+                   text-left text-[13px] font-medium
+                   text-[#d4d4d4]
+                   hover:bg-white/[0.06]
+                   transition-colors duration-100"
+          >
+
+            <span>
+              2× Fast
+            </span>
+
+            <i
+              data-lucide="check"
+              class="speed-check w-3.5 h-3.5 hidden"
+            ></i>
+
+          </button>
+
+
+          <button
+            type="button"
+            role="option"
+            data-speed="5"
+            class="speed-option w-full
+                   flex items-center justify-between
+                   px-4 py-2.5
+                   text-left text-[13px] font-medium
+                   text-[#d4d4d4]
+                   hover:bg-white/[0.06]
+                   transition-colors duration-100"
+          >
+
+            <span>
+              5× Rapid
+            </span>
+
+            <i
+              data-lucide="check"
+              class="speed-check w-3.5 h-3.5 hidden"
+            ></i>
+
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- ========================================================== -->
+      <!-- START -->
+      <!-- ========================================================== -->
+
+      <button
+        id="startBtn"
+        type="button"
+        class="btn btn-primary h-[46px] min-w-[160px] shadow-lg shadow-blue-500/25"
+      >
+
+        <i
+          id="startIcon"
+          data-lucide="play"
+          class="w-4 h-4"
+        ></i>
+
+        <span id="startBtnText">
+          Start Replay
+        </span>
+
+      </button>
+
+
+      <!-- ========================================================== -->
+      <!-- STOP -->
+      <!-- ========================================================== -->
+
+      <button
+        id="stopBtn"
+        type="button"
+        class="btn btn-secondary h-[46px] min-w-[105px]"
+        disabled
+      >
+
+        <i
+          id="stopIcon"
+          data-lucide="square"
+          class="w-4 h-4"
+        ></i>
+
+        <span>
+          Stop
+        </span>
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================================ -->
+  <!-- FORENSIC NOTICE -->
+  <!-- ================================================================ -->
+
+  <div
+    class="rounded border border-warning/30 bg-warning/5
+           px-4 py-3 flex gap-3 items-start"
+  >
+
+    <i
+      data-lucide="triangle-alert"
+      class="w-4 h-4 text-warning mt-0.5 flex-shrink-0"
+    ></i>
+
+    <div class="text-xs text-muted leading-relaxed">
+
+      <span class="text-warning font-semibold">
+        Forensic-safe visualization:
+      </span>
+
+      this dashboard visualizes records already present in the selected
+      CDR analysis session. It is a controlled simulation/replay and does
+      not represent a live telecom carrier feed. Original evidence and
+      static analysis are never modified.
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================================ -->
+  <!-- STATUS / PROGRESS -->
+  <!-- ================================================================ -->
+
+  <section class="panel">
+
+    <div class="p-4">
+
+      <div class="flex flex-col md:flex-row md:items-center
+                  md:justify-between gap-3">
+
+        <div>
+
+          <div class="flex items-center gap-2">
+
+            <span
+              id="statusDot"
+              class="w-2 h-2 rounded-full bg-muted"
+            ></span>
+
+            <span
+              id="connectionState"
+              class="text-xs font-semibold text-muted"
+            >
+              STOPPED
+            </span>
+
+            <span
+              id="feedBadge"
+              class="text-[10px] px-2 py-0.5 rounded
+                     bg-panel border border-border text-muted"
+            >
+              IDLE
+            </span>
+
+          </div>
+
+          <p
+            id="statusMessage"
+            class="text-[11px] text-muted mt-1"
+          >
+            Waiting for replay.
+          </p>
+
+        </div>
+
+
+        <div class="text-right">
+
+          <div class="text-[10px] text-muted">
+            REPLAY PROGRESS
+          </div>
+
+          <div
+            id="progressText"
+            class="text-xs font-mono text-tx mt-1"
+          >
+            0 / {{ total_events }}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="mt-3 h-1.5 rounded-full bg-panel overflow-hidden"
+      >
+
+        <div
+          id="progressBar"
+          class="h-full bg-accent transition-all duration-200"
+          style="width:0%"
+        ></div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ================================================================ -->
+  <!-- KPI CARDS -->
+  <!-- ================================================================ -->
+
+  <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+      <p class="kpi-label text-center">Events</p>
+      <p id="eventCount" class="kpi-value text-center">0</p>
+    </div>
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+      <p class="kpi-label text-center">Calls</p>
+      <p id="callCount" class="kpi-value text-center">0</p>
+    </div>
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+      <p class="kpi-label text-center">SMS</p>
+      <p id="smsCount" class="kpi-value text-center">0</p>
+    </div>
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+      <p class="kpi-label text-center">Locations</p>
+      <p id="locationCount" class="kpi-value text-center">0</p>
+    </div>
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+      <p class="kpi-label text-center">Entities</p>
+      <p id="entityCount" class="kpi-value text-center">0</p>
+    </div>
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+      <p class="kpi-label text-center">Relationships</p>
+      <p id="relationshipCount" class="kpi-value text-center">0</p>
+    </div>
+
+  </div>
+
+
+  <!-- ================================================================ -->
+  <!-- LIVE CHARTS -->
+  <!-- ================================================================ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+
+    <!-- ACTIVITY TIMELINE -->
+
+    <section class="panel">
+
+      <div class="panel-header">
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Live Event Activity
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Events processed during replay
+          </p>
+
+        </div>
+
+        <span class="text-[10px] text-muted">
+          TIME SERIES
+        </span>
+
+      </div>
+
+      <div class="p-4">
+
+        <canvas
+          id="activityChart"
+          height="120"
+        ></canvas>
+
+      </div>
+
+    </section>
+
+
+    <!-- EVENT DISTRIBUTION -->
+
+    <section class="panel">
+
+      <div class="panel-header">
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Intelligence Distribution
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Current replay event composition
+          </p>
+
+        </div>
+
+        <span class="text-[10px] text-muted">
+          DISTRIBUTION
+        </span>
+
+      </div>
+
+      <div class="p-4">
+
+        <canvas
+          id="eventChart"
+          height="120"
+        ></canvas>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+  <!-- ================================================================ -->
+  <!-- GEOGRAPHIC + NETWORK -->
+  <!-- ================================================================ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+
+    <!-- LIVE GEO MAP -->
+
+    <section class="panel overflow-hidden">
+
+      <div class="panel-header">
+
+        <div>
+
+          <h2
+            class="text-sm font-semibold text-tx flex items-center gap-2"
+          >
+
+            <i
+              data-lucide="map"
+              class="w-4 h-4 text-warning"
+            ></i>
+
+            Live Geographic Intelligence
+
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Location events plotted as the replay progresses
+          </p>
+
+        </div>
+
+        <span
+          id="mapStatus"
+          class="text-[10px] text-muted"
+        >
+          NO LOCATION DATA
+        </span>
+
+      </div>
+
+
+      <div
+        id="liveMap"
+        class="w-full h-[420px] bg-panel"
+      ></div>
+
+    </section>
+
+
+    <!-- LIVE NETWORK -->
+
+    <section class="panel overflow-hidden">
+
+      <div class="panel-header">
+
+        <div>
+
+          <h2
+            class="text-sm font-semibold text-tx flex items-center gap-2"
+          >
+
+            <i
+              data-lucide="network"
+              class="w-4 h-4 text-accent"
+            ></i>
+
+            Live Communication Network
+
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Caller and receiver relationships discovered during replay
+          </p>
+
+        </div>
+
+        <span
+          id="networkStatus"
+          class="text-[10px] text-muted"
+        >
+          0 NODES
+        </span>
+
+      </div>
+
+
+      <div
+        id="liveNetwork"
+        class="w-full h-[420px] bg-panel"
+      ></div>
+
+    </section>
+
+  </div>
+
+
+  <!-- ================================================================ -->
+  <!-- EVENT FEED + DETAILS -->
+  <!-- ================================================================ -->
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+
+    <!-- EVENT FEED -->
+
+    <section class="panel xl:col-span-2">
+
+      <div class="panel-header">
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Intelligence Event Feed
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Most recent replay events
+          </p>
+
+        </div>
+
+        <span
+          id="feedCount"
+          class="text-[10px] text-muted"
+        >
+          0 EVENTS
+        </span>
+
+      </div>
+
+
+      <div
+        id="eventFeed"
+        class="divide-y divide-border max-h-[430px] overflow-y-auto"
+      >
+
+        <div
+          id="emptyFeed"
+          class="px-4 py-12 text-center text-xs text-muted"
+        >
+
+          <i
+            data-lucide="radio"
+            class="w-6 h-6 mx-auto mb-2 opacity-40"
+          ></i>
+
+          No intelligence event received yet.
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- LATEST EVENT -->
+
+    <aside class="space-y-4">
+
+
+      <section class="panel">
+
+        <div class="panel-header">
+
+          <h2 class="text-sm font-semibold text-tx">
+            Latest Event
+          </h2>
+
+        </div>
+
+        <div
+          id="latestEvent"
+          class="p-4 text-xs text-muted"
+        >
+          No event received yet.
+        </div>
+
+      </section>
+
+
+      <section class="panel">
+
+        <div class="panel-header">
+
+          <h2 class="text-sm font-semibold text-tx">
+            Replay Source
+          </h2>
+
+        </div>
+
+        <div class="p-4 space-y-3 text-xs">
+
+
+          <div>
+
+            <span class="text-muted">
+              Target
+            </span>
+
+            <div
+              class="mt-1 font-mono text-tx break-all"
+            >
+              {{ target }}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <span class="text-muted">
+              Dataset
+            </span>
+
+            <div
+              class="mt-1 text-tx break-all"
+            >
+              {{ filename or 'CDR Analysis Session' }}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <span class="text-muted">
+              Records
+            </span>
+
+            <div class="mt-1 text-tx">
+              {{ total_records }}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <span class="text-muted">
+              Replay Events
+            </span>
+
+            <div class="mt-1 text-tx">
+              {{ total_events }}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <span class="text-muted">
+              Visualization
+            </span>
+
+            <div class="mt-1 text-accent">
+              LIVE / INTERACTIVE
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <span class="text-muted">
+              Mode
+            </span>
+
+            <div class="mt-1 text-warning">
+              SIMULATION / REPLAY
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ACTIVE ENTITIES -->
+
+      <section class="panel">
+
+        <div class="panel-header">
+
+          <h2 class="text-sm font-semibold text-tx">
+            Active Entities
+          </h2>
+
+        </div>
+
+        <div
+          id="activeEntities"
+          class="p-4 space-y-2 max-h-[230px] overflow-y-auto"
+        >
+
+          <div class="text-xs text-muted">
+            No entities discovered yet.
+          </div>
+
+        </div>
+
+      </section>
+
+    </aside>
+
+  </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+
+  /* ================================================================
+     CONFIGURATION
+  ================================================================ */
+
+  const sessionId = {{ session_id|tojson }};
+
+  const totalEvents =
+    Number({{ total_events|tojson }}) || 0;
+
+
+  /* ================================================================
+     DOM
+  ================================================================ */
+
+  const startBtn =
+    document.getElementById("startBtn");
+
+  const stopBtn =
+    document.getElementById("stopBtn");
+
+  const startBtnText =
+    document.getElementById("startBtnText");
+
+  const startIcon =
+    document.getElementById("startIcon");
+
+  const speedSelect =
+    document.getElementById("speedSelect");
+
+  const speedDropdown =
+    document.getElementById("speedDropdown");
+
+  const speedDropdownBtn =
+    document.getElementById("speedDropdownBtn");
+
+  const speedDropdownLabel =
+    document.getElementById("speedDropdownLabel");
+
+  const speedDropdownMenu =
+    document.getElementById("speedDropdownMenu");
+
+  const speedDropdownChevron =
+    document.getElementById("speedDropdownChevron");
+
+  const speedOptions =
+    document.querySelectorAll(".speed-option");
+
+  const connectionState =
+    document.getElementById("connectionState");
+
+  const feedBadge =
+    document.getElementById("feedBadge");
+
+  const statusMessage =
+    document.getElementById("statusMessage");
+
+  const statusDot =
+    document.getElementById("statusDot");
+
+  const progressBar =
+    document.getElementById("progressBar");
+
+  const progressText =
+    document.getElementById("progressText");
+
+  const eventCount =
+    document.getElementById("eventCount");
+
+  const callCount =
+    document.getElementById("callCount");
+
+  const smsCount =
+    document.getElementById("smsCount");
+
+  const locationCount =
+    document.getElementById("locationCount");
+
+  const entityCount =
+    document.getElementById("entityCount");
+
+  const relationshipCount =
+    document.getElementById("relationshipCount");
+
+  const feed =
+    document.getElementById("eventFeed");
+
+  const emptyFeed =
+    document.getElementById("emptyFeed");
+
+  const latestEvent =
+    document.getElementById("latestEvent");
+
+  const feedCount =
+    document.getElementById("feedCount");
+
+  const activeEntities =
+    document.getElementById("activeEntities");
+
+  const mapStatus =
+    document.getElementById("mapStatus");
+
+  const networkStatus =
+    document.getElementById("networkStatus");
+
+
+  /* ================================================================
+     STATE
+  ================================================================ */
+
+  let running = false;
+
+  let timer = null;
+
+  let offset = 0;
+
+  let processed = 0;
+
+  let totalEntities = 0;
+
+  let totalRelationships = 0;
+
+  const distribution = {
+    CALL: 0,
+    SMS: 0,
+    LOCATION: 0
+  };
+
+  const entities = new Set();
+
+  const relationships = new Map();
+
+  const timelineLabels = [];
+
+  const timelineCounts = [];
+
+
+  /* ================================================================
+     CUSTOM SPEED DROPDOWN
+  ================================================================ */
+
+  function closeSpeedDropdown() {
+
+    speedDropdownMenu.classList.add("hidden");
+
+    speedDropdownBtn.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+    speedDropdownChevron.classList.remove(
+      "rotate-180"
+    );
+
+  }
+
+
+  function openSpeedDropdown() {
+
+    if (running) {
+      return;
+    }
+
+    speedDropdownMenu.classList.remove("hidden");
+
+    speedDropdownBtn.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+    speedDropdownChevron.classList.add(
+      "rotate-180"
+    );
+
+  }
+
+
+  function updateSpeedVisual(selectedValue) {
+
+    const labels = {
+      "1": "1× Normal",
+      "2": "2× Fast",
+      "5": "5× Rapid"
+    };
+
+    speedDropdownLabel.textContent =
+      labels[selectedValue] || "5× Rapid";
+
+
+    speedOptions.forEach(function (option) {
+
+      const optionValue =
+        option.getAttribute("data-speed");
+
+      const check =
+        option.querySelector(".speed-check");
+
+
+      if (optionValue === selectedValue) {
+
+        option.classList.remove(
+          "text-[#d4d4d4]"
+        );
+
+        option.classList.add(
+          "bg-[#2563eb]/15",
+          "text-[#60a5fa]"
+        );
+
+        check.classList.remove("hidden");
+
+      }
+
+      else {
+
+        option.classList.remove(
+          "bg-[#2563eb]/15",
+          "text-[#60a5fa]"
+        );
+
+        option.classList.add(
+          "text-[#d4d4d4]"
+        );
+
+        check.classList.add("hidden");
+
+      }
+
+    });
+
+
+    if (typeof lucide !== "undefined") {
+      lucide.createIcons();
+    }
+
+  }
+
+
+  speedDropdownBtn.addEventListener(
+    "click",
+    function (event) {
+
+      event.stopPropagation();
+
+      const isOpen =
+        !speedDropdownMenu.classList.contains(
+          "hidden"
+        );
+
+      if (isOpen) {
+        closeSpeedDropdown();
+      }
+
+      else {
+        openSpeedDropdown();
+      }
+
+    }
+  );
+
+
+  speedOptions.forEach(function (option) {
+
+    option.addEventListener(
+      "click",
+      function () {
+
+        const selectedValue =
+          option.getAttribute("data-speed");
+
+
+        /*
+         * Keep the original select value updated.
+         * replayConfig() continues using this value.
+         */
+
+        speedSelect.value =
+          selectedValue;
+
+
+        updateSpeedVisual(
+          selectedValue
+        );
+
+
+        closeSpeedDropdown();
+
+      }
+    );
+
+  });
+
+
+  document.addEventListener(
+    "click",
+    function (event) {
+
+      if (
+        speedDropdown &&
+        !speedDropdown.contains(event.target)
+      ) {
+
+        closeSpeedDropdown();
+
+      }
+
+    }
+  );
+
+
+  document.addEventListener(
+    "keydown",
+    function (event) {
+
+      if (event.key === "Escape") {
+
+        closeSpeedDropdown();
+
+      }
+
+    }
+  );
+
+
+  /*
+   * Initial speed state.
+   */
+
+  updateSpeedVisual(
+    speedSelect.value || "5"
+  );
+
+
+  /* ================================================================
+     BUTTON UI
+  ================================================================ */
+
+  function setStartButtonState(state) {
+
+    if (state === "starting") {
+
+      startBtnText.textContent =
+        "Starting…";
+
+      startIcon.setAttribute(
+        "data-lucide",
+        "loader-circle"
+      );
+
+      startIcon.className =
+        "w-4 h-4 animate-spin";
+
+
+      startBtn.classList.remove(
+        "bg-[#3b82f6]",
+        "hover:bg-[#2563eb]"
+      );
+
+      startBtn.classList.add(
+        "bg-[#2563eb]",
+        "cursor-wait"
+      );
+
+    }
+
+    else if (state === "running") {
+
+      startBtnText.textContent =
+        "Replay Running";
+
+      startIcon.setAttribute(
+        "data-lucide",
+        "radio"
+      );
+
+      startIcon.className =
+        "w-4 h-4 animate-pulse";
+
+
+      startBtn.classList.remove(
+        "bg-[#3b82f6]",
+        "hover:bg-[#2563eb]",
+        "cursor-wait"
+      );
+
+      startBtn.classList.add(
+        "bg-[#2563eb]",
+        "cursor-not-allowed"
+      );
+
+    }
+
+    else {
+
+      startBtnText.textContent =
+        "Start Replay";
+
+      startIcon.setAttribute(
+        "data-lucide",
+        "play"
+      );
+
+      startIcon.className =
+        "w-4 h-4";
+
+
+      startBtn.classList.remove(
+        "bg-[#2563eb]",
+        "cursor-wait",
+        "cursor-not-allowed"
+      );
+
+      startBtn.classList.add(
+        "bg-[#3b82f6]",
+        "hover:bg-[#2563eb]"
+      );
+
+    }
+
+
+    if (typeof lucide !== "undefined") {
+      lucide.createIcons();
+    }
+
+  }
+
+
+  function setStopButtonState(active) {
+
+    if (active) {
+
+      stopBtn.classList.remove(
+        "bg-[#111111]",
+        "border-[#292929]",
+        "text-[#555555]"
+      );
+
+      stopBtn.classList.add(
+        "bg-[#1a1111]",
+        "border-rose-500/40",
+        "text-rose-400",
+        "hover:bg-rose-500/10",
+        "hover:border-rose-500/60"
+      );
+
+    }
+
+    else {
+
+      stopBtn.classList.remove(
+        "bg-[#1a1111]",
+        "border-rose-500/40",
+        "text-rose-400",
+        "hover:bg-rose-500/10",
+        "hover:border-rose-500/60"
+      );
+
+      stopBtn.classList.add(
+        "bg-[#111111]",
+        "border-[#292929]",
+        "text-[#555555]"
+      );
+
+    }
+
+  }
+
+
+  /* ================================================================
+     HELPERS
+  ================================================================ */
+
+  function escapeHtml(value) {
+
+    return String(value ?? "")
+      .replace(
+        /[&<>'"]/g,
+        function (ch) {
+
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            "'": "&#39;",
+            '"': "&quot;"
+
+          }[ch];
+
+        }
+      );
+
+  }
+
+
+  function firstValue(obj, keys) {
+
+    for (const key of keys) {
+
+      if (
+        obj &&
+        obj[key] !== undefined &&
+        obj[key] !== null &&
+        String(obj[key]).trim() !== ""
+      ) {
+
+        return obj[key];
+
+      }
+
+    }
+
+    return "";
+
+  }
+
+
+  function numberValue(value) {
+
+    const n = Number(value);
+
+    return Number.isFinite(n) ? n : null;
+
+  }
+
+
+  function normalizeType(event) {
+
+    const raw = String(
+      firstValue(
+        event,
+        [
+          "event_type",
+          "type",
+          "call_type",
+          "event"
+        ]
+      ) || "EVENT"
+    ).toUpperCase();
+
+
+    if (raw.includes("SMS")) {
+      return "SMS";
+    }
+
+
+    if (
+      raw.includes("LOCATION") ||
+      raw.includes("GEO")
+    ) {
+      return "LOCATION";
+    }
+
+
+    if (
+      raw.includes("CALL") ||
+      raw.includes("INCOMING") ||
+      raw.includes("OUTGOING")
+    ) {
+      return "CALL";
+    }
+
+
+    return "EVENT";
+
+  }
+
+
+  function getTimestamp(event) {
+
+    return firstValue(
+      event,
+      [
+        "timestamp",
+        "time",
+        "event_time",
+        "datetime",
+        "date"
+      ]
+    );
+
+  }
+
+
+  function getCaller(event) {
+
+    return String(
+      firstValue(
+        event,
+        [
+          "caller",
+          "from",
+          "source",
+          "source_number"
+        ]
+      ) || ""
+    );
+
+  }
+
+
+  function getReceiver(event) {
+
+    return String(
+      firstValue(
+        event,
+        [
+          "receiver",
+          "to",
+          "target",
+          "target_number"
+        ]
+      ) || ""
+    );
+
+  }
+
+
+  function getLatitude(event) {
+
+    return numberValue(
+      firstValue(
+        event,
+        [
+          "lat",
+          "latitude"
+        ]
+      )
+    );
+
+  }
+
+
+  function getLongitude(event) {
+
+    return numberValue(
+      firstValue(
+        event,
+        [
+          "lon",
+          "lng",
+          "longitude"
+        ]
+      )
+    );
+
+  }
+
+
+  function getCell(event) {
+
+    return String(
+      firstValue(
+        event,
+        [
+          "cell_id",
+          "cell",
+          "tower_id"
+        ]
+      ) || ""
+    );
+
+  }
+
+
+  /* ================================================================
+     STATUS
+  ================================================================ */
+
+  function setState(state, message) {
+
+    connectionState.textContent =
+      state;
+
+    feedBadge.textContent =
+      state;
+
+    statusMessage.textContent =
+      message || "";
+
+
+    if (state === "LIVE") {
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+
+      connectionState.className =
+        "text-xs font-semibold text-emerald-400";
+
+      feedBadge.className =
+        "text-[10px] px-2 py-0.5 rounded " +
+        "bg-emerald-500/10 border border-emerald-500/20 " +
+        "text-emerald-400";
+
+
+      setStartButtonState(
+        "running"
+      );
+
+    }
+
+    else if (state === "CONNECTING") {
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-warning animate-pulse";
+
+      connectionState.className =
+        "text-xs font-semibold text-warning";
+
+      feedBadge.className =
+        "text-[10px] px-2 py-0.5 rounded " +
+        "bg-warning/10 border border-warning/20 " +
+        "text-warning";
+
+
+      setStartButtonState(
+        "starting"
+      );
+
+    }
+
+    else if (state === "COMPLETE") {
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-emerald-400";
+
+      connectionState.className =
+        "text-xs font-semibold text-emerald-400";
+
+      feedBadge.className =
+        "text-[10px] px-2 py-0.5 rounded " +
+        "bg-emerald-500/10 border border-emerald-500/20 " +
+        "text-emerald-400";
+
+
+      setStartButtonState(
+        "idle"
+      );
+
+    }
+
+    else if (state === "ERROR") {
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-rose-400";
+
+      connectionState.className =
+        "text-xs font-semibold text-rose-400";
+
+      feedBadge.className =
+        "text-[10px] px-2 py-0.5 rounded " +
+        "bg-rose-500/10 border border-rose-500/20 " +
+        "text-rose-400";
+
+
+      setStartButtonState(
+        "idle"
+      );
+
+    }
+
+    else {
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-muted";
+
+      connectionState.className =
+        "text-xs font-semibold text-muted";
+
+      feedBadge.className =
+        "text-[10px] px-2 py-0.5 rounded " +
+        "bg-panel border border-border text-muted";
+
+
+      setStartButtonState(
+        "idle"
+      );
+
+    }
+
+  }
+
+
+  /* ================================================================
+     CHART 1 — EVENT ACTIVITY
+  ================================================================ */
+
+  const activityChart =
+    new Chart(
+      document.getElementById("activityChart"),
+      {
+
+        type: "line",
+
+        data: {
+
+          labels: [],
+
+          datasets: [
+
+            {
+              label: "Events",
+              data: [],
+              tension: 0.35,
+              fill: true,
+              pointRadius: 2
+            }
+
+          ]
+
+        },
+
+        options: {
+
+          responsive: true,
+
+          maintainAspectRatio: false,
+
+          animation: false,
+
+          scales: {
+
+            x: {
+
+              ticks: {
+                maxTicksLimit: 8
+              }
+
+            },
+
+            y: {
+
+              beginAtZero: true,
+
+              ticks: {
+                precision: 0
+              }
+
+            }
+
+          },
+
+          plugins: {
+
+            legend: {
+              display: false
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+
+  /* ================================================================
+     CHART 2 — DISTRIBUTION
+  ================================================================ */
+
+  const eventChart =
+    new Chart(
+      document.getElementById("eventChart"),
+      {
+
+        type: "doughnut",
+
+        data: {
+
+          labels: [
+            "CALL",
+            "SMS",
+            "LOCATION"
+          ],
+
+          datasets: [
+
+            {
+              data: [0, 0, 0]
+            }
+
+          ]
+
+        },
+
+        options: {
+
+          responsive: true,
+
+          maintainAspectRatio: false,
+
+          animation: false,
+
+          plugins: {
+
+            legend: {
+
+              position: "bottom",
+
+              labels: {
+                boxWidth: 10,
+                padding: 12
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+
+  /* ================================================================
+     MAP
+  ================================================================ */
+
+  let leafletMap = null;
+
+  let mapMarkers = [];
+
+  let mapPath = [];
+
+
+  if (
+    typeof L !== "undefined" &&
+    document.getElementById("liveMap")
+  ) {
+
+    leafletMap =
+      L.map("liveMap", {
+        zoomControl: true
+      }).setView(
+        [20.5937, 78.9629],
+        5
+      );
+
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+
+        attribution:
+          "&copy; OpenStreetMap contributors"
+
+      }
+    ).addTo(leafletMap);
+
+  }
+
+
+  /* ================================================================
+     NETWORK
+  ================================================================ */
+
+  let network = null;
+
+  let networkNodes = null;
+
+  let networkEdges = null;
+
+
+  if (
+    typeof vis !== "undefined" &&
+    document.getElementById("liveNetwork")
+  ) {
+
+    networkNodes =
+      new vis.DataSet([]);
+
+    networkEdges =
+      new vis.DataSet([]);
+
+
+    const networkData = {
+
+      nodes: networkNodes,
+
+      edges: networkEdges
+
+    };
+
+
+    const networkOptions = {
+
+      autoResize: true,
+
+      interaction: {
+
+        hover: true,
+
+        navigationButtons: true,
+
+        keyboard: true
+
+      },
+
+      physics: {
+
+        stabilization: {
+
+          iterations: 100
+
+        },
+
+        barnesHut: {
+
+          gravitationalConstant: -3000,
+
+          centralGravity: 0.2,
+
+          springLength: 130,
+
+          springConstant: 0.04,
+
+          damping: 0.09
+
+        }
+
+      },
+
+      nodes: {
+
+        shape: "dot",
+
+        size: 18,
+
+        font: {
+
+          color: "#d4d4d4",
+
+          size: 11
+
+        }
+
+      },
+
+      edges: {
+
+        arrows: "to",
+
+        smooth: {
+
+          type: "dynamic"
+
+        }
+
+      }
+
+    };
+
+
+    network =
+      new vis.Network(
+        document.getElementById("liveNetwork"),
+        networkData,
+        networkOptions
+      );
+
+  }
+
+
+  /* ================================================================
+     RESET
+  ================================================================ */
+
+  function resetVisualization() {
+
+    processed = 0;
+
+    totalEntities = 0;
+
+    totalRelationships = 0;
+
+
+    entities.clear();
+
+    relationships.clear();
+
+
+    distribution.CALL = 0;
+
+    distribution.SMS = 0;
+
+    distribution.LOCATION = 0;
+
+
+    timelineLabels.length = 0;
+
+    timelineCounts.length = 0;
+
+
+    eventCount.textContent = "0";
+
+    callCount.textContent = "0";
+
+    smsCount.textContent = "0";
+
+    locationCount.textContent = "0";
+
+    entityCount.textContent = "0";
+
+    relationshipCount.textContent = "0";
+
+
+    feedCount.textContent =
+      "0 EVENTS";
+
+
+    progressText.textContent =
+      `0 / ${totalEvents}`;
+
+
+    progressBar.style.width =
+      "0%";
+
+
+    feed.innerHTML = "";
+
+    feed.appendChild(
+      emptyFeed
+    );
+
+    emptyFeed.style.display =
+      "";
+
+
+    latestEvent.textContent =
+      "No event received yet.";
+
+
+    activeEntities.innerHTML =
+      `<div class="text-xs text-muted">
+        No entities discovered yet.
+      </div>`;
+
+
+    activityChart.data.labels =
+      [];
+
+    activityChart.data.datasets[0].data =
+      [];
+
+    activityChart.update();
+
+
+    eventChart.data.datasets[0].data =
+      [0, 0, 0];
+
+    eventChart.update();
+
+
+    if (leafletMap) {
+
+      mapMarkers.forEach(
+        marker =>
+          leafletMap.removeLayer(marker)
+      );
+
+
+      mapMarkers = [];
+
+      mapPath = [];
+
+
+      if (
+        window.triadLivePolyline
+      ) {
+
+        leafletMap.removeLayer(
+          window.triadLivePolyline
+        );
+
+        window.triadLivePolyline =
+          null;
+
+      }
+
+    }
+
+
+    if (
+      networkNodes &&
+      networkEdges
+    ) {
+
+      networkNodes.clear();
+
+      networkEdges.clear();
+
+    }
+
+
+    mapStatus.textContent =
+      "NO LOCATION DATA";
+
+
+    networkStatus.textContent =
+      "0 NODES";
+
+  }
+
+
+  /* ================================================================
+     ADD ENTITY
+  ================================================================ */
+
+  function registerEntity(value) {
+
+    if (!value) {
+      return;
+    }
+
+
+    const clean =
+      String(value).trim();
+
+
+    if (
+      !clean ||
+      clean === "UNKNOWN" ||
+      clean === "nan" ||
+      clean === "None"
+    ) {
+
+      return;
+
+    }
+
+
+    if (!entities.has(clean)) {
+
+      entities.add(clean);
+
+      totalEntities =
+        entities.size;
+
+    }
+
+  }
+
+
+  /* ================================================================
+     NETWORK UPDATE
+  ================================================================ */
+
+  function updateNetwork(event) {
+
+    if (
+      !networkNodes ||
+      !networkEdges
+    ) {
+
+      return;
+
+    }
+
+
+    const caller =
+      getCaller(event);
+
+    const receiver =
+      getReceiver(event);
+
+
+    if (
+      !caller ||
+      !receiver
+    ) {
+
+      return;
+
+    }
+
+
+    registerEntity(caller);
+
+    registerEntity(receiver);
+
+
+    if (
+      !networkNodes.get(caller)
+    ) {
+
+      networkNodes.add({
+
+        id: caller,
+
+        label: caller,
+
+        title:
+          `Entity: ${caller}`,
+
+        group: "phone"
+
+      });
+
+    }
+
+
+    if (
+      !networkNodes.get(receiver)
+    ) {
+
+      networkNodes.add({
+
+        id: receiver,
+
+        label: receiver,
+
+        title:
+          `Entity: ${receiver}`,
+
+        group: "phone"
+
+      });
+
+    }
+
+
+    const edgeId =
+      `${caller}__${receiver}`;
+
+
+    const existing =
+      networkEdges.get(edgeId);
+
+
+    if (existing) {
+
+      networkEdges.update({
+
+        id: edgeId,
+
+        value:
+          Number(existing.value || 1) + 1,
+
+        title:
+          `${caller} → ${receiver}<br>` +
+          `Interactions: ${Number(existing.value || 1) + 1}`
+
+      });
+
+    }
+
+    else {
+
+      networkEdges.add({
+
+        id: edgeId,
+
+        from: caller,
+
+        to: receiver,
+
+        value: 1,
+
+        title:
+          `${caller} → ${receiver}<br>` +
+          `Interactions: 1`
+
+      });
+
+
+      totalRelationships++;
+
+    }
+
+
+    relationshipCount.textContent =
+      totalRelationships;
+
+
+    entityCount.textContent =
+      totalEntities;
+
+
+    networkStatus.textContent =
+      `${networkNodes.length} NODES`;
+
+  }
+
+
+  /* ================================================================
+     MAP UPDATE
+  ================================================================ */
+
+  function updateMap(event) {
+
+    if (!leafletMap) {
+      return;
+    }
+
+
+    const lat =
+      getLatitude(event);
+
+    const lon =
+      getLongitude(event);
+
+
+    if (
+      lat === null ||
+      lon === null ||
+      lat < -90 ||
+      lat > 90 ||
+      lon < -180 ||
+      lon > 180
+    ) {
+
+      return;
+
+    }
+
+
+    const caller =
+      getCaller(event);
+
+    const receiver =
+      getReceiver(event);
+
+    const cell =
+      getCell(event);
+
+    const timestamp =
+      getTimestamp(event);
+
+
+    const marker =
+      L.circleMarker(
+        [lat, lon],
+        {
+
+          radius: 6,
+
+          weight: 1,
+
+          fillOpacity: 0.8
+
+        }
+      );
+
+
+    marker.bindPopup(
+
+      `<div style="font-size:12px">
+
+        <strong>
+          Intelligence Event
+        </strong><br>
+
+        ${escapeHtml(timestamp)}<br>
+
+        ${escapeHtml(caller)}
+        →
+        ${escapeHtml(receiver)}<br>
+
+        Cell:
+        ${escapeHtml(cell)}<br>
+
+        Coordinates:
+        ${lat.toFixed(5)},
+        ${lon.toFixed(5)}
+
+      </div>`
+
+    );
+
+
+    marker.addTo(
+      leafletMap
+    );
+
+
+    mapMarkers.push(
+      marker
+    );
+
+
+    mapPath.push(
+      [lat, lon]
+    );
+
+
+    if (
+      mapPath.length > 1
+    ) {
+
+      if (
+        window.triadLivePolyline
+      ) {
+
+        leafletMap.removeLayer(
+          window.triadLivePolyline
+        );
+
+      }
+
+
+      window.triadLivePolyline =
+        L.polyline(
+          mapPath,
+          {
+
+            weight: 2,
+
+            opacity: 0.65
+
+          }
+        ).addTo(
+          leafletMap
+        );
+
+    }
+
+
+    leafletMap.setView(
+      [lat, lon],
+      Math.max(
+        leafletMap.getZoom(),
+        10
+      ),
+      {
+        animate: true
+      }
+    );
+
+
+    mapStatus.textContent =
+      `${mapPath.length} LOCATIONS`;
+
+  }
+
+
+  /* ================================================================
+     ACTIVE ENTITY PANEL
+  ================================================================ */
+
+  function renderEntities() {
+
+    const values =
+      Array.from(entities)
+        .slice(-15)
+        .reverse();
+
+
+    if (!values.length) {
+
+      activeEntities.innerHTML =
+        `<div class="text-xs text-muted">
+          No entities discovered yet.
+        </div>`;
+
+      return;
+
+    }
+
+
+    activeEntities.innerHTML =
+      values.map(
+
+        value =>
+
+          `<div
+             class="flex items-center gap-2
+                    px-2.5 py-2 rounded
+                    bg-panel border border-border"
+           >
+
+             <i
+               data-lucide="circle-user-round"
+               class="w-3.5 h-3.5 text-accent"
+             ></i>
+
+             <span
+               class="font-mono text-[11px] text-tx break-all"
+             >
+               ${escapeHtml(value)}
+             </span>
+
+           </div>`
+
+      ).join("");
+
+
+    if (
+      typeof lucide !== "undefined"
+    ) {
+
+      lucide.createIcons();
+
+    }
+
+  }
+
+
+  /* ================================================================
+     ACTIVITY CHART UPDATE
+  ================================================================ */
+
+  function updateActivityChart(event) {
+
+    const timestamp =
+      getTimestamp(event);
+
+
+    let label =
+      timestamp ||
+      `#${processed}`;
+
+
+    if (
+      label.length > 19
+    ) {
+
+      label =
+        label.slice(0, 19);
+
+    }
+
+
+    timelineLabels.push(
+      label
+    );
+
+
+    timelineCounts.push(
+      processed
+    );
+
+
+    const maxPoints = 40;
+
+
+    if (
+      timelineLabels.length >
+      maxPoints
+    ) {
+
+      timelineLabels.shift();
+
+      timelineCounts.shift();
+
+    }
+
+
+    activityChart.data.labels =
+      [...timelineLabels];
+
+
+    activityChart.data.datasets[0].data =
+      [...timelineCounts];
+
+
+    activityChart.update(
+      "none"
+    );
+
+  }
+
+
+  /* ================================================================
+     DISTRIBUTION UPDATE
+  ================================================================ */
+
+  function updateDistribution(type) {
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        distribution,
+        type
+      )
+    ) {
+
+      distribution[type]++;
+
+    }
+
+
+    eventChart.data.datasets[0].data = [
+
+      distribution.CALL,
+
+      distribution.SMS,
+
+      distribution.LOCATION
+
+    ];
+
+
+    eventChart.update(
+      "none"
+    );
+
+  }
+
+
+  /* ================================================================
+     FEED RENDER
+  ================================================================ */
+
+  function renderEvent(event) {
+
+    emptyFeed.style.display =
+      "none";
+
+
+    const type =
+      normalizeType(event);
+
+
+    const caller =
+      getCaller(event);
+
+    const receiver =
+      getReceiver(event);
+
+    const timestamp =
+      getTimestamp(event);
+
+    const cell =
+      getCell(event);
+
+
+    let icon =
+      "activity";
+
+
+    if (
+      type === "CALL"
+    ) {
+
+      icon =
+        "phone";
+
+    }
+
+    else if (
+      type === "SMS"
+    ) {
+
+      icon =
+        "message-square";
+
+    }
+
+    else if (
+      type === "LOCATION"
+    ) {
+
+      icon =
+        "map-pin";
+
+    }
+
+
+    const row =
+      document.createElement(
+        "div"
+      );
+
+
+    row.className =
+      "px-4 py-3 hover:bg-white/[0.02]";
+
+
+    row.innerHTML =
+
+      `<div class="flex items-start gap-3">
+
+        <div
+          class="w-7 h-7 rounded
+                 bg-panel border border-border
+                 flex items-center justify-center
+                 flex-shrink-0"
+        >
+
+          <i
+            data-lucide="${icon}"
+            class="w-3.5 h-3.5 text-accent"
+          ></i>
+
+        </div>
+
+
+        <div class="min-w-0 flex-1">
+
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+
+            <span
+              class="text-[10px] font-semibold
+                     text-accent"
+            >
+              ${escapeHtml(type)}
+            </span>
+
+            <span
+              class="text-[10px] text-muted"
+            >
+              ${escapeHtml(timestamp)}
+            </span>
+
+          </div>
+
+
+          <div
+            class="text-xs text-tx mt-1 break-all"
+          >
+
+            ${escapeHtml(
+              caller || "UNKNOWN"
+            )}
+
+            <span class="text-muted px-1">
+              →
+            </span>
+
+            ${escapeHtml(
+              receiver || "UNKNOWN"
+            )}
+
+          </div>
+
+
+          <div
+            class="text-[10px] text-muted mt-1"
+          >
+
+            ${
+              cell
+                ? `Cell: ${escapeHtml(cell)}`
+                : "No cell information"
+            }
+
+          </div>
+
+        </div>
+
+      </div>`;
+
+
+    feed.insertBefore(
+      row,
+      feed.children[1] || null
+    );
+
+
+    while (
+      feed.children.length > 31
+    ) {
+
+      feed.removeChild(
+        feed.lastElementChild
+      );
+
+    }
+
+
+    if (
+      typeof lucide !== "undefined"
+    ) {
+
+      lucide.createIcons();
+
+    }
+
+
+    feedCount.textContent =
+      `${processed} EVENTS`;
+
+  }
+
+
+  /* ================================================================
+     LATEST EVENT
+  ================================================================ */
+
+  function updateLatestEvent(event) {
+
+    const type =
+      normalizeType(event);
+
+    const timestamp =
+      getTimestamp(event);
+
+    const caller =
+      getCaller(event);
+
+    const receiver =
+      getReceiver(event);
+
+    const cell =
+      getCell(event);
+
+    const lat =
+      getLatitude(event);
+
+    const lon =
+      getLongitude(event);
+
+
+    latestEvent.innerHTML =
+
+      `<div class="space-y-3">
+
+        <div>
+
+          <div class="text-[10px] text-muted">
+            EVENT TYPE
+          </div>
+
+          <div
+            class="mt-1 text-accent
+                   font-semibold"
+          >
+            ${escapeHtml(type)}
+          </div>
+
+        </div>
+
+
+        <div>
+
+          <div class="text-[10px] text-muted">
+            TIMESTAMP
+          </div>
+
+          <div
+            class="mt-1 text-tx font-mono
+                   break-all"
+          >
+            ${escapeHtml(
+              timestamp || "Unknown"
+            )}
+          </div>
+
+        </div>
+
+
+        <div>
+
+          <div class="text-[10px] text-muted">
+            COMMUNICATION
+          </div>
+
+          <div
+            class="mt-1 text-tx font-mono
+                   break-all"
+          >
+            ${escapeHtml(
+              caller || "UNKNOWN"
+            )}
+            →
+            ${escapeHtml(
+              receiver || "UNKNOWN"
+            )}
+          </div>
+
+        </div>
+
+
+        ${
+          cell
+            ? `<div>
+
+                 <div class="text-[10px] text-muted">
+                   CELL / TOWER
+                 </div>
+
+                 <div
+                   class="mt-1 text-tx font-mono"
+                 >
+                   ${escapeHtml(cell)}
+                 </div>
+
+               </div>`
+            : ""
+        }
+
+
+        ${
+          lat !== null &&
+          lon !== null
+
+            ? `<div>
+
+                 <div class="text-[10px] text-muted">
+                   LOCATION
+                 </div>
+
+                 <div
+                   class="mt-1 text-tx font-mono"
+                 >
+                   ${lat.toFixed(5)},
+                   ${lon.toFixed(5)}
+                 </div>
+
+               </div>`
+
+            : ""
+        }
+
+      </div>`;
+
+  }
+
+
+  /* ================================================================
+     PROCESS EVENT
+  ================================================================ */
+
+  function handleEvent(event) {
+
+    processed++;
+
+
+    const type =
+      normalizeType(event);
+
+
+    /* COUNTERS */
+
+    eventCount.textContent =
+      processed;
+
+
+    if (
+      type === "CALL"
+    ) {
+
+      callCount.textContent =
+        distribution.CALL + 1;
+
+    }
+
+    else if (
+      type === "SMS"
+    ) {
+
+      smsCount.textContent =
+        distribution.SMS + 1;
+
+    }
+
+    else if (
+      type === "LOCATION"
+    ) {
+
+      locationCount.textContent =
+        distribution.LOCATION + 1;
+
+    }
+
+
+    /* DISTRIBUTION */
+
+    updateDistribution(
+      type
+    );
+
+
+    /* ENTITIES */
+
+    registerEntity(
+      getCaller(event)
+    );
+
+    registerEntity(
+      getReceiver(event)
+    );
+
+
+    entityCount.textContent =
+      totalEntities;
+
+
+    /* NETWORK */
+
+    updateNetwork(
+      event
+    );
+
+
+    /* MAP */
+
+    updateMap(
+      event
+    );
+
+
+    /* CHART */
+
+    updateActivityChart(
+      event
+    );
+
+
+    /* FEED */
+
+    renderEvent(
+      event
+    );
+
+
+    /* LATEST */
+
+    updateLatestEvent(
+      event
+    );
+
+
+    /* ENTITY PANEL */
+
+    renderEntities();
+
+
+    /* PROGRESS */
+
+    const percent =
+      totalEvents > 0
+
+        ? Math.min(
+            100,
+            (processed / totalEvents) * 100
+          )
+
+        : 0;
+
+
+    progressBar.style.width =
+      `${percent}%`;
+
+
+    progressText.textContent =
+      `${processed} / ${totalEvents}`;
+
+  }
+
+
+  /* ================================================================
+     RESET REPLAY
+  ================================================================ */
+
+  function resetReplay() {
+
+    if (timer) {
+
+      clearTimeout(
+        timer
+      );
+
+      timer = null;
+
+    }
+
+
+    running = false;
+
+    offset = 0;
+
+
+    resetVisualization();
+
+
+    startBtn.disabled =
+      false;
+
+    stopBtn.disabled =
+      true;
+
+
+    setStopButtonState(
+      false
+    );
+
+
+    setStartButtonState(
+      "idle"
+    );
+
+
+    setState(
+      "STOPPED",
+      "Waiting for replay."
+    );
+
+  }
+
+
+  /* ================================================================
+     REPLAY CONFIG
+  ================================================================ */
+
+  function replayConfig() {
+
+    const speed =
+      Number(
+        speedSelect.value
+      ) || 1;
+
+
+    if (
+      speed === 5
+    ) {
+
+      return {
+
+        limit: 25,
+
+        wait: 100
+
+      };
+
+    }
+
+
+    if (
+      speed === 2
+    ) {
+
+      return {
+
+        limit: 10,
+
+        wait: 120
+
+      };
+
+    }
+
+
+    return {
+
+      limit: 5,
+
+      wait: 150
+
+    };
+
+  }
+
+
+  /* ================================================================
+     FETCH NEXT BATCH
+  ================================================================ */
+
+  async function fetchBatch() {
+
+    if (!running) {
+      return;
+    }
+
+
+    const config =
+      replayConfig();
+
+
+    try {
+
+      const response =
+        await fetch(
+
+          `/api/realtime/${encodeURIComponent(
+            sessionId
+          )}/events?offset=${offset}&limit=${config.limit}`,
+
+          {
+            cache: "no-store"
+          }
+
+        );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      const payload =
+        await response.json();
+
+
+      if (!payload.success) {
+
+        throw new Error(
+          payload.error ||
+          "Replay request failed"
+        );
+
+      }
+
+
+      setState(
+        "LIVE",
+        `Processing ${payload.total_events || totalEvents} intelligence events.`
+      );
+
+
+      for (
+        const event of
+        payload.events || []
+      ) {
+
+        handleEvent(
+          event
+        );
+
+      }
+
+
+      offset =
+        Number(
+          payload.next_offset ||
+          offset
+        );
+
+
+      if (
+        payload.completed
+      ) {
+
+        running =
+          false;
+
+
+        setState(
+          "COMPLETE",
+          "Replay completed. All available events have been visualized."
+        );
+
+
+        startBtn.disabled =
+          false;
+
+        stopBtn.disabled =
+          true;
+
+
+        setStopButtonState(
+          false
+        );
+
+
+        setStartButtonState(
+          "idle"
+        );
+
+
+        timer =
+          null;
+
+
+        return;
+
+      }
+
+
+      timer =
+        setTimeout(
+          fetchBatch,
+          config.wait
+        );
+
+    }
+
+
+    catch (error) {
+
+      console.error(
+        "Live Replay Error:",
+        error
+      );
+
+
+      running =
+        false;
+
+
+      setState(
+        "ERROR",
+        error.message ||
+        "Unable to retrieve intelligence events."
+      );
+
+
+      startBtn.disabled =
+        false;
+
+      stopBtn.disabled =
+        true;
+
+
+      setStopButtonState(
+        false
+      );
+
+
+      setStartButtonState(
+        "idle"
+      );
+
+
+      timer =
+        null;
+
+    }
+
+  }
+
+
+  /* ================================================================
+     START
+  ================================================================ */
+
+  startBtn.addEventListener(
+    "click",
+    function () {
+
+      if (running) {
+        return;
+      }
+
+
+      /*
+       * Close speed menu if somehow open.
+       */
+
+      closeSpeedDropdown();
+
+
+      resetVisualization();
+
+
+      offset =
+        0;
+
+      running =
+        true;
+
+
+      startBtn.disabled =
+        true;
+
+      stopBtn.disabled =
+        false;
+
+
+      setStopButtonState(
+        true
+      );
+
+
+      setState(
+        "CONNECTING",
+        "Initializing live visualization..."
+      );
+
+
+      fetchBatch();
+
+    }
+  );
+
+
+  /* ================================================================
+     STOP
+  ================================================================ */
+
+  stopBtn.addEventListener(
+    "click",
+    function () {
+
+      if (timer) {
+
+        clearTimeout(
+          timer
+        );
+
+        timer = null;
+
+      }
+
+
+      running =
+        false;
+
+
+      startBtn.disabled =
+        false;
+
+      stopBtn.disabled =
+        true;
+
+
+      setStopButtonState(
+        false
+      );
+
+
+      setStartButtonState(
+        "idle"
+      );
+
+
+      setState(
+        "STOPPED",
+        "Replay stopped. Visualization state has been retained."
+      );
+
+    }
+  );
+
+
+  /* ================================================================
+     INITIALIZE
+  ================================================================ */
+
+  resetVisualization();
+
+
+  setStartButtonState(
+    "idle"
+  );
+
+
+  setStopButtonState(
+    false
+  );
+
+
+  updateSpeedVisual(
+    speedSelect.value || "5"
+  );
+
+
+  if (
+    typeof lucide !== "undefined"
+  ) {
+
+    lucide.createIcons();
+
+  }
+
+
+  if (leafletMap) {
+
+    setTimeout(
+      function () {
+
+        leafletMap.invalidateSize();
+
+      },
+      300
+    );
+
+  }
+
+});
+
+</script>
+
+{% endblock %}

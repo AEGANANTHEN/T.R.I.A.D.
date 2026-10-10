@@ -1,0 +1,447 @@
+{% extends "layout.html" %}
+{% set session_id = none %}
+
+{% block title %}Case {{ case.case_number }} — Evidence Registry | DEMS{% endblock %}
+{% block page_title %}{{ case.case_number }} — Evidence Registry{% endblock %}
+
+{% block breadcrumb %}
+  <span class="text-slate-600">/</span>
+  <a href="{{ url_for('dems.cases_list') }}" class="text-sm text-sky-400 font-mono hover:text-sky-300">dems/cases</a>
+  <span class="text-slate-600">/</span>
+  <span class="text-sm text-slate-400 font-mono">{{ case.case_number }}</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation: fadeIn .3s ease both; }
+  .ev-row:hover { background: rgba(14,165,233,0.04); }
+  .coc-drawer { transition: transform 0.35s cubic-bezier(.22,1,.36,1); }
+  .coc-drawer.open { transform: translateX(0) !important; }
+  .dropzone-active { border-color: #0ea5e9 !important; background: rgba(14,165,233,0.06) !important; }
+  @keyframes progressPulse { 0%,100%{opacity:.8} 50%{opacity:1} }
+  .upload-progress { animation: progressPulse 1s ease infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-5 fade-in">
+
+  <!-- ── CASE HEADER ─────────────────────────────────────────────────────── -->
+  <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+    <!-- Classification ribbon -->
+    <div class="px-5 py-1.5 bg-gradient-to-r from-sky-900/40 to-transparent border-b border-cyber-border flex items-center justify-between">
+      <span class="text-[10px] font-mono text-sky-400 uppercase tracking-widest">
+        {{ case.classification }} // {{ case.case_number }}
+      </span>
+      <div class="flex items-center gap-2">
+        {% set priority_dot = {'Critical':'bg-rose-500','High':'bg-amber-500','Medium':'bg-sky-500','Low':'bg-slate-500'}.get(case.priority.value,'bg-slate-500') %}
+        <div class="w-1.5 h-1.5 rounded-full {{ priority_dot }} animate-pulse"></div>
+        <span class="text-[10px] font-mono text-slate-500">{{ case.priority.value }} Priority</span>
+      </div>
+    </div>
+
+    <div class="p-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <!-- Title & Status -->
+      <div class="lg:col-span-2">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i data-lucide="folder-open" class="w-5 h-5 text-sky-400"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h1 class="text-xl font-bold text-white leading-tight">{{ case.title }}</h1>
+            {% if case.description %}
+            <p class="text-sm text-slate-500 mt-1 leading-relaxed">{{ case.description }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Meta chips -->
+        <div class="flex flex-wrap gap-2 mt-4">
+          {% if case.jurisdiction %}
+          <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyber-surface border border-cyber-border text-xs text-slate-400 font-mono">
+            <i data-lucide="map-pin" class="w-3 h-3"></i> {{ case.jurisdiction }}
+          </span>
+          {% endif %}
+          {% if case.incident_date %}
+          <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyber-surface border border-cyber-border text-xs text-slate-400 font-mono">
+            <i data-lucide="calendar" class="w-3 h-3"></i> {{ case.incident_date.strftime('%d %b %Y') }}
+          </span>
+          {% endif %}
+          {% if case.lead_investigator %}
+          <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyber-surface border border-cyber-border text-xs text-slate-400 font-mono">
+            <i data-lucide="user-check" class="w-3 h-3"></i> {{ case.lead_investigator.full_name or case.lead_investigator.username }}
+          </span>
+          {% endif %}
+          <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyber-surface border border-cyber-border text-xs text-slate-400 font-mono">
+            <i data-lucide="clock" class="w-3 h-3"></i> {{ case.created_at.strftime('%d %b %Y %H:%M') }} UTC
+          </span>
+        </div>
+      </div>
+
+      <!-- Status & Actions -->
+      <div class="space-y-3">
+        <!-- Status badge -->
+        {% set st_map = {'Open':'text-sky-400 bg-sky-500/10 border-sky-500/30','Active':'text-emerald-400 bg-emerald-500/10 border-emerald-500/30','Draft':'text-slate-400 bg-slate-500/10 border-slate-500/30','Suspended':'text-amber-400 bg-amber-500/10 border-amber-500/30','Court Ready':'text-purple-400 bg-purple-500/10 border-purple-500/30','Closed':'text-slate-500 bg-slate-700 border-slate-600','Archived':'text-slate-600 bg-slate-900 border-slate-800'} %}
+        <div class="flex items-center gap-2 p-3 rounded-lg border {{ st_map.get(case.status.value, 'text-slate-400 bg-slate-500/10 border-slate-500/30') }}">
+          <i data-lucide="circle-dot" class="w-4 h-4"></i>
+          <span class="font-mono text-sm font-semibold">{{ case.status.value }}</span>
+        </div>
+        <!-- Stats -->
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="p-3 bg-cyber-surface border border-cyber-border rounded-lg">
+            <p class="text-xl font-bold text-white">{{ evidence_items|length }}</p>
+            <p class="text-[10px] text-slate-500 font-mono">Evidence Items</p>
+          </div>
+          <div class="p-3 bg-cyber-surface border border-cyber-border rounded-lg">
+            <p class="text-xl font-bold text-white">{{ coc_events|length }}</p>
+            <p class="text-[10px] text-slate-500 font-mono">CoC Events</p>
+          </div>
+        </div>
+        <!-- Quick actions -->
+        <div class="flex gap-2">
+          <button onclick="document.getElementById('cocDrawer').classList.toggle('open')"
+            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-cyber-surface border border-cyber-border text-slate-400 hover:text-sky-400 hover:border-sky-500/40 rounded-lg text-xs font-mono transition-all">
+            <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
+            CoC Timeline
+          </button>
+          {% if dems_user.has_permission('upload_evidence') %}
+          <button onclick="document.getElementById('uploadModal').classList.remove('hidden')"
+            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 rounded-lg text-xs font-mono transition-all">
+            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+            Ingest Evidence
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EVIDENCE REGISTRY TABLE ─────────────────────────────────────────── -->
+  <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-cyber-border">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="database" class="w-4 h-4 text-sky-400"></i>
+        <h2 class="text-sm font-semibold text-white">Evidence Registry</h2>
+        <span class="px-2 py-0.5 text-[10px] rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">
+          {{ evidence_items|length }} items
+        </span>
+      </div>
+      {% if dems_user.has_permission('upload_evidence') %}
+      <button onclick="document.getElementById('uploadModal').classList.remove('hidden')"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 rounded-lg text-xs font-mono transition-all">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        Ingest Evidence
+      </button>
+      {% endif %}
+    </div>
+
+    {% if evidence_items %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-cyber-border bg-cyber-surface/50">
+            <th class="px-4 py-2.5 text-left text-[10px] font-mono text-slate-500 uppercase tracking-wider w-28">Tag</th>
+            <th class="px-4 py-2.5 text-left text-[10px] font-mono text-slate-500 uppercase tracking-wider">Title / File</th>
+            <th class="px-4 py-2.5 text-left text-[10px] font-mono text-slate-500 uppercase tracking-wider w-36">Type</th>
+            <th class="px-4 py-2.5 text-left text-[10px] font-mono text-slate-500 uppercase tracking-wider w-24">Size</th>
+            <th class="px-4 py-2.5 text-left text-[10px] font-mono text-slate-500 uppercase tracking-wider w-32">Integrity</th>
+            <th class="px-4 py-2.5 text-left text-[10px] font-mono text-slate-500 uppercase tracking-wider w-36">Custodian</th>
+            <th class="px-4 py-2.5 text-right text-[10px] font-mono text-slate-500 uppercase tracking-wider w-28">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-cyber-border">
+          {% for ev in evidence_items %}
+          {% set type_icons = {
+            'Telecom Data': ('phone-call','text-sky-400'),
+            'Mobile Extraction': ('smartphone','text-purple-400'),
+            'Disk & Memory Image': ('hard-drive','text-amber-400'),
+            'Network & System Logs': ('wifi','text-emerald-400'),
+            'Multimedia': ('film','text-pink-400'),
+            'Reports': ('file-text','text-slate-400'),
+            'Other': ('file','text-slate-500'),
+          } %}
+          {% set ti = type_icons.get(ev.evidence_type.value, ('file','text-slate-500')) %}
+          {% set vs_map = {
+            'Verified': ('check-circle','text-emerald-400','bg-emerald-500/10 border-emerald-500/30'),
+            'Tamper Detected': ('alert-triangle','text-rose-400','bg-rose-500/10 border-rose-500/30'),
+            'Not Verified': ('minus-circle','text-slate-500','bg-slate-500/10 border-slate-600'),
+            'Error': ('x-circle','text-amber-400','bg-amber-500/10 border-amber-500/30'),
+          } %}
+          {% set vs = vs_map.get(ev.last_verified_status.value, ('minus-circle','text-slate-500','bg-slate-500/10 border-slate-600')) %}
+
+          <tr class="ev-row transition-colors">
+            <td class="px-4 py-3">
+              <span class="font-mono text-[11px] text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
+                {{ ev.evidence_tag }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <i data-lucide="{{ ti[0] }}" class="w-4 h-4 {{ ti[1] }} flex-shrink-0"></i>
+                <div class="min-w-0">
+                  <p class="text-sm text-white truncate max-w-xs font-medium">{{ ev.title }}</p>
+                  <p class="text-[11px] text-slate-500 font-mono truncate max-w-xs">{{ ev.original_filename }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-xs font-mono text-slate-400">{{ ev.evidence_type.value }}</span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-xs font-mono text-slate-400">{{ ev.file_size_human }}</span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-mono {{ vs[2] }}">
+                <i data-lucide="{{ vs[0] }}" class="w-3 h-3 {{ vs[1] }}"></i>
+                <span class="{{ vs[1] }}">{{ ev.last_verified_status.value }}</span>
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              {% if ev.current_custodian %}
+              <div class="flex items-center gap-1.5">
+                <div class="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center">
+                  <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
+                </div>
+                <span class="text-xs text-slate-400 font-mono truncate max-w-[100px]">
+                  {{ ev.current_custodian.username }}
+                </span>
+              </div>
+              {% else %}
+              <span class="text-xs text-slate-600 font-mono">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <a href="{{ url_for('dems.evidence_detail', evidence_id=ev.id) }}"
+                class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-600/20 border border-sky-500/30 text-sky-400 hover:bg-sky-600/30 rounded text-[11px] font-mono transition-all">
+                <i data-lucide="external-link" class="w-3 h-3"></i>
+                View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-center px-4">
+      <div class="w-12 h-12 rounded-xl bg-slate-800 border border-cyber-border flex items-center justify-center mb-3">
+        <i data-lucide="database" class="w-6 h-6 text-slate-600"></i>
+      </div>
+      <p class="text-slate-400 text-sm font-medium mb-1">No Evidence Ingested</p>
+      <p class="text-slate-600 text-xs font-mono mb-4">Use the "Ingest Evidence" button to upload encrypted evidence items to this case.</p>
+      {% if dems_user.has_permission('upload_evidence') %}
+      <button onclick="document.getElementById('uploadModal').classList.remove('hidden')"
+        class="flex items-center gap-2 px-4 py-2 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-mono transition-all hover:bg-emerald-600/30">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+        Ingest First Evidence
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── CoC TIMELINE DRAWER ─────────────────────────────────────────────────── -->
+<div id="cocDrawer" class="coc-drawer fixed top-0 right-0 h-full w-80 bg-cyber-surface border-l border-cyber-border z-50 shadow-2xl overflow-y-auto"
+     style="transform: translateX(100%)">
+  <div class="flex items-center justify-between p-4 border-b border-cyber-border sticky top-0 bg-cyber-surface">
+    <div class="flex items-center gap-2">
+      <i data-lucide="git-branch" class="w-4 h-4 text-sky-400"></i>
+      <h3 class="text-sm font-semibold text-white">Case CoC Timeline</h3>
+    </div>
+    <button onclick="document.getElementById('cocDrawer').classList.remove('open')"
+      class="text-slate-500 hover:text-slate-300 transition-colors">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+
+  <div class="p-4 space-y-1">
+    {% if coc_events %}
+    <div class="relative">
+      <div class="absolute left-4 top-0 bottom-0 w-px bg-cyber-border"></div>
+      {% for event in coc_events %}
+      {% set action_colors = {
+        'INGESTION': ('text-emerald-400','bg-emerald-500/10 border-emerald-500/30','upload'),
+        'ANALYSIS_RUN': ('text-sky-400','bg-sky-500/10 border-sky-500/30','cpu'),
+        'CHECK_OUT': ('text-amber-400','bg-amber-500/10 border-amber-500/30','log-out'),
+        'CHECK_IN': ('text-cyan-400','bg-cyan-500/10 border-cyan-500/30','log-in'),
+        'TRANSFER_CUSTODY': ('text-purple-400','bg-purple-500/10 border-purple-500/30','users'),
+        'INTEGRITY_CHECK': ('text-emerald-400','bg-emerald-500/10 border-emerald-500/30','shield-check'),
+        'COURT_EXHIBIT_EXPORT': ('text-amber-400','bg-amber-500/10 border-amber-500/30','gavel'),
+        'ACCESS_VIEW': ('text-slate-400','bg-slate-500/10 border-slate-600','eye'),
+        'DOWNLOAD': ('text-blue-400','bg-blue-500/10 border-blue-500/30','download'),
+        'DISPOSITION': ('text-rose-400','bg-rose-500/10 border-rose-500/30','trash-2'),
+      } %}
+      {% set ac = action_colors.get(event.action.value, ('text-slate-400','bg-slate-500/10 border-slate-600','activity')) %}
+      <div class="relative pl-9 pb-4">
+        <div class="absolute left-2.5 top-0.5 w-3 h-3 rounded-full border-2 border-current {{ ac[0] }} bg-cyber-surface"></div>
+        <div class="p-3 rounded-lg border {{ ac[1] }}">
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <span class="text-[11px] font-mono font-semibold {{ ac[0] }} uppercase tracking-wide">{{ event.action.value }}</span>
+            <span class="text-[10px] font-mono text-slate-600">{{ event.timestamp_utc.strftime('%d/%m %H:%M') }}</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-snug">{{ event.purpose or '—' }}</p>
+          <p class="text-[10px] text-slate-600 font-mono mt-1">
+            by {{ event.actor.username if event.actor else '—' }}
+            {% if event.evidence %}· {{ event.evidence.evidence_tag }}{% endif %}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-8">
+      <i data-lucide="git-branch" class="w-8 h-8 text-slate-700 mx-auto mb-2"></i>
+      <p class="text-xs text-slate-600 font-mono">No CoC events yet</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── EVIDENCE UPLOAD MODAL ───────────────────────────────────────────────── -->
+<div id="uploadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+  <div class="bg-cyber-card border border-cyber-border rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-cyber-border">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+          <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-white">Ingest Evidence</h2>
+          <p class="text-[10px] text-slate-500 font-mono">AES-256-GCM encrypted vault storage · Dual SHA-256+MD5 hash</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('uploadModal').classList.add('hidden')"
+        class="text-slate-500 hover:text-slate-300 transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form method="POST" action="{{ url_for('dems.evidence_upload') }}" enctype="multipart/form-data" class="px-6 py-5 space-y-4" id="uploadForm">
+      <input type="hidden" name="case_id" value="{{ case.id }}" />
+
+      <!-- Drop Zone -->
+      <div id="dropZone" class="border-2 border-dashed border-cyber-border rounded-xl p-8 text-center cursor-pointer hover:border-sky-500/40 transition-all"
+           onclick="document.getElementById('evidenceFile').click()"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)">
+        <i data-lucide="upload-cloud" class="w-10 h-10 text-slate-600 mx-auto mb-3" id="dropIcon"></i>
+        <p class="text-sm text-slate-400" id="dropText">Drag & drop file here or click to browse</p>
+        <p class="text-[11px] text-slate-600 font-mono mt-1" id="dropSubtext">Supports all forensic formats · Max 2GB</p>
+        <input type="file" id="evidenceFile" name="evidence_file" class="hidden" required onchange="handleFileSelect(this)" />
+      </div>
+
+      <!-- Upload Progress (hidden initially) -->
+      <div id="uploadProgress" class="hidden">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span class="font-mono">Encrypting & hashing…</span>
+          <span id="progressPct" class="font-mono">0%</span>
+        </div>
+        <div class="w-full bg-cyber-surface rounded-full h-1.5 overflow-hidden">
+          <div id="progressBar" class="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full upload-progress" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Evidence Title *</label>
+        <input type="text" name="title" required placeholder="Descriptive title for this evidence item"
+          class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-colors font-mono" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Evidence Type *</label>
+        <select name="evidence_type" class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-emerald-500/60 font-mono">
+          {% for et in EvidenceType %}
+          <option value="{{ et.value }}">{{ et.value }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Notes / Description</label>
+        <textarea name="notes" rows="2" placeholder="Source of collection, collection method, chain of custody notes…"
+          class="w-full px-3 py-2.5 bg-cyber-surface border border-cyber-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-colors font-mono resize-none"></textarea>
+      </div>
+
+      <!-- Compliance Notice -->
+      <div class="flex items-start gap-2.5 p-3 bg-sky-500/5 border border-sky-500/20 rounded-lg">
+        <i data-lucide="info" class="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5"></i>
+        <p class="text-[11px] text-sky-300/70 leading-relaxed">
+          File will be encrypted with AES-256-GCM. SHA-256, MD5, and SHA-512 hashes are computed in-stream before storage.
+          An INGESTION Chain of Custody event will be logged with your badge number and timestamp.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2 border-t border-cyber-border">
+        <button type="button" onclick="document.getElementById('uploadModal').classList.add('hidden')"
+          class="px-4 py-2 bg-cyber-surface border border-cyber-border text-slate-400 hover:text-slate-300 rounded-lg text-sm font-mono transition-colors">
+          Cancel
+        </button>
+        <button type="submit" id="submitUpload"
+          class="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/30">
+          <i data-lucide="lock" class="w-4 h-4"></i>
+          Encrypt & Ingest
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  lucide.createIcons();
+
+  // ── Drop Zone Handling ──────────────────────────────────────────────────
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.add('dropzone-active');
+  }
+  function handleDragLeave(e) {
+    document.getElementById('dropZone').classList.remove('dropzone-active');
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('dropzone-active');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      document.getElementById('evidenceFile').files = e.dataTransfer.files;
+      updateDropZone(file);
+    }
+  }
+  function handleFileSelect(input) {
+    if (input.files[0]) updateDropZone(input.files[0]);
+  }
+  function updateDropZone(file) {
+    const size = (file.size / 1024 / 1024).toFixed(2);
+    document.getElementById('dropText').textContent = `✓ ${file.name}`;
+    document.getElementById('dropSubtext').textContent = `${size} MB selected`;
+    document.getElementById('dropIcon').setAttribute('data-lucide', 'file-check');
+    lucide.createIcons();
+  }
+
+  // ── Upload Progress Simulation ──────────────────────────────────────────
+  document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('evidenceFile');
+    if (!fileInput.files.length) return;
+    document.getElementById('uploadProgress').classList.remove('hidden');
+    document.getElementById('submitUpload').disabled = true;
+    document.getElementById('submitUpload').textContent = 'Encrypting…';
+    let pct = 0;
+    const interval = setInterval(() => {
+      pct = Math.min(pct + Math.random() * 15, 90);
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = Math.round(pct) + '%';
+      if (pct >= 90) clearInterval(interval);
+    }, 200);
+  });
+
+  // Close modals on backdrop click
+  document.getElementById('uploadModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+  });
+</script>
+{% endblock %}

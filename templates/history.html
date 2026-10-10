@@ -1,0 +1,325 @@
+{% extends "layout.html" %}
+
+{% block title %}Investigation History — T.R.I.A.D.{% endblock %}
+{% block page_title %}Investigation History & Cases{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-11 h-11 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i data-lucide="history" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white tracking-tight">Investigation History</h1>
+        <p class="text-xs text-neutral-400">
+          Saved T.R.I.A.D. forensic analyses, multi-target cross-matches, and audit logs.
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="clearAllHistory()" class="btn btn-danger btn-sm">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        Clear History
+      </button>
+      <a href="{{ url_for('index') }}" class="btn btn-primary btn-sm">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        New Analysis
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Statistics Overview Cards ──────────────────────────────── -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    {% set single_count = history | selectattr("type", "equalto", "single") | list | length %}
+    {% set cross_count = history | selectattr("type", "equalto", "cross_match") | list | length %}
+    {% set total_records = history | map(attribute="records_count") | sum %}
+    
+    <div class="glass-card p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">Total Analyses</span>
+        <i data-lucide="folder-archive" class="w-4 h-4 text-cyber-purple"></i>
+      </div>
+      <div class="text-2xl font-bold font-mono text-cyber-purple mt-2">{{ history | length }}</div>
+      <div class="text-[10px] text-slate-600 mt-1">Saved Sessions</div>
+    </div>
+
+    <div class="glass-card p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">Single Targets</span>
+        <i data-lucide="user-check" class="w-4 h-4 text-cyber-cyan"></i>
+      </div>
+      <div class="text-2xl font-bold font-mono text-cyber-cyan mt-2">{{ single_count }}</div>
+      <div class="text-[10px] text-slate-600 mt-1">Single CDR Files</div>
+    </div>
+
+    <div class="glass-card p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">Cross-Matches</span>
+        <i data-lucide="git-fork" class="w-4 h-4 text-cyber-amber"></i>
+      </div>
+      <div class="text-2xl font-bold font-mono text-cyber-amber mt-2">{{ cross_count }}</div>
+      <div class="text-[10px] text-slate-600 mt-1">Multi-Target Intel</div>
+    </div>
+
+    <div class="glass-card p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">Records Analyzed</span>
+        <i data-lucide="database" class="w-4 h-4 text-cyber-emerald"></i>
+      </div>
+      <div class="text-2xl font-bold font-mono text-cyber-emerald mt-2">{{ "{:,}".format(total_records) }}</div>
+      <div class="text-[10px] text-slate-600 mt-1">Total Telecom Rows</div>
+    </div>
+  </div>
+
+  <!-- ── History Table Card ─────────────────────────────────────── -->
+  <div class="glass-card p-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="list" class="w-4 h-4 text-cyber-cyan"></i>
+          Audit Log & Investigation Archive
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">Click any record to inspect interactive intelligence dashboards</p>
+      </div>
+      
+      <!-- Quick Filter Pills -->
+      <div class="flex gap-1.5 bg-cyber-bg/80 p-1.5 rounded-xl border border-cyber-border/80">
+        <button onclick="filterType('all')" id="filter-all" class="pill-tab active text-xs font-mono">All ({{ history | length }})</button>
+        <button onclick="filterType('single')" id="filter-single" class="pill-tab text-xs font-mono">Single ({{ single_count }})</button>
+        <button onclick="filterType('cross_match')" id="filter-cross" class="pill-tab text-xs font-mono">Cross-Match ({{ cross_count }})</button>
+      </div>
+    </div>
+
+    {% if history %}
+    <div class="overflow-x-auto">
+      <table id="history-table" class="w-full text-left text-xs font-mono stripe hover">
+        <thead>
+          <tr class="border-b border-cyber-border text-slate-500 uppercase text-[10px] tracking-wider">
+            <th>Type</th>
+            <th>Target / Case</th>
+            <th>Source File(s)</th>
+            <th>Date & Time</th>
+            <th>Records</th>
+            <th>Contacts</th>
+            <th>Anomalies</th>
+            <th>SHA-256 Hash</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-cyber-border/30">
+          {% for item in history %}
+          <tr class="hover:bg-cyber-surface/50 transition-colors history-row" data-type="{{ item.type }}" id="row-{{ item.id }}">
+            
+            <!-- Type Badge -->
+            <td class="py-3.5 pr-3">
+              {% if item.type == 'single' %}
+              <span class="px-2.5 py-1 bg-cyber-cyan/15 border border-cyber-cyan/35 text-cyber-cyan rounded-md text-[10px] font-bold inline-flex items-center gap-1 shadow-sm">
+                <i data-lucide="file-text" class="w-3 h-3"></i> Single CDR
+              </span>
+              {% else %}
+              <span class="px-2.5 py-1 bg-cyber-amber/15 border border-cyber-amber/35 text-cyber-amber rounded-md text-[10px] font-bold inline-flex items-center gap-1 shadow-sm">
+                <i data-lucide="layers" class="w-3 h-3"></i> Cross-Match
+              </span>
+              {% endif %}
+            </td>
+
+            <!-- Target & Case Ref -->
+            <td class="py-3.5 pr-4">
+              <div class="font-bold text-white">
+                {% if item.type == 'single' %}
+                {{ item.target }}
+                {% else %}
+                <span class="text-cyber-amber">{{ item.targets | length }} Targets:</span>
+                <span class="text-[11px] text-slate-300 font-normal">
+                  {{ item.targets[:2] | join(', ') }}{% if item.targets | length > 2 %}...{% endif %}
+                </span>
+                {% endif %}
+              </div>
+              <div class="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                <i data-lucide="bookmark" class="w-2.5 h-2.5"></i>
+                Ref: {{ item.case_ref if item.case_ref else '—' }}
+              </div>
+            </td>
+
+            <!-- Filename -->
+            <td class="py-3.5 pr-4 text-slate-300 max-w-[180px] truncate" title="{{ item.filename if item.type == 'single' else item.filenames | join(', ') }}">
+              {% if item.type == 'single' %}
+              <span class="text-slate-400">{{ item.filename }}</span>
+              {% else %}
+              <span class="text-slate-400">{{ item.filenames | join(', ') }}</span>
+              {% endif %}
+            </td>
+
+            <!-- Timestamp -->
+            <td class="py-3.5 pr-4 text-slate-400 whitespace-nowrap">
+              <div>{{ item.timestamp.split(' ')[0] if item.timestamp else '—' }}</div>
+              <div class="text-[10px] text-slate-600">{{ item.timestamp.split(' ')[1] if item.timestamp and ' ' in item.timestamp else '' }}</div>
+            </td>
+
+            <!-- Records Count -->
+            <td class="py-3.5 pr-4 font-bold text-cyber-emerald">
+              {{ "{:,}".format(item.records_count) if item.records_count else 0 }}
+            </td>
+
+            <!-- Contacts Count -->
+            <td class="py-3.5 pr-4 text-slate-300">
+              {{ item.contacts_count }}
+            </td>
+
+            <!-- Anomalies -->
+            <td class="py-3.5 pr-4">
+              {% if item.anomalies_count and item.anomalies_count > 0 %}
+              <span class="px-2 py-0.5 bg-cyber-rose/15 border border-cyber-rose/30 text-cyber-rose rounded text-[10px] font-bold inline-flex items-center gap-1">
+                <i data-lucide="zap" class="w-2.5 h-2.5"></i> {{ item.anomalies_count }} Alert{% if item.anomalies_count != 1 %}s{% endif %}
+              </span>
+              {% else %}
+              <span class="text-slate-600 text-[11px]">—</span>
+              {% endif %}
+            </td>
+
+            <!-- SHA-256 -->
+            <td class="py-3.5 pr-4 text-slate-500 font-mono text-[10px]">
+              {% if item.sha256 and item.sha256 != 'Multi-File Hash' %}
+              <span class="text-cyber-emerald" title="{{ item.sha256 }}">{{ item.sha256[:10] }}...</span>
+              {% else %}
+              <span class="text-slate-600">Multi</span>
+              {% endif %}
+            </td>
+
+            <!-- Actions -->
+            <td class="py-3.5 text-right whitespace-nowrap">
+              <div class="flex items-center justify-end gap-1.5">
+                {% if item.type == 'single' %}
+                <a href="{{ url_for('dashboard', session_id=item.id) }}"
+                   class="btn btn-outline btn-xs font-mono font-bold"
+                   title="Open interactive dashboard">
+                  <i data-lucide="layout-dashboard" class="w-3 h-3"></i> View
+                </a>
+                {% else %}
+                <a href="{{ url_for('cross_match_view', session_id=item.id) }}"
+                   class="btn btn-warning btn-xs font-mono font-bold"
+                   title="Open cross-match intel">
+                  <i data-lucide="layers" class="w-3 h-3"></i> View
+                </a>
+                {% endif %}
+                <a href="{{ url_for('report_view', session_id=item.id) }}" target="_blank"
+                   class="btn btn-secondary btn-xs p-1.5"
+                   title="Printable / PDF Forensic Dossier">
+                  <i data-lucide="printer" class="w-3.5 h-3.5 text-cyan-400"></i>
+                </a>
+                <a href="{{ url_for('export_excel', session_id=item.id) }}"
+                   class="btn btn-secondary btn-xs p-1.5"
+                   title="Download Forensic Excel Workbook (.XLSX)">
+                  <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
+                </a>
+                <button onclick="deleteHistoryRecord('{{ item.id }}')"
+                        class="btn btn-ghost btn-xs p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                        title="Delete record">
+                  <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-16">
+      <div class="w-16 h-16 bg-cyber-surface border border-cyber-border rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-600">
+        <i data-lucide="inbox" class="w-8 h-8"></i>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-1">No Investigations Found</h3>
+      <p class="text-slate-500 text-xs max-w-sm mx-auto mb-6">
+        When you upload and analyze Single or Multi-CDR files, full forensic session snapshots are archived here.
+      </p>
+      <a href="{{ url_for('index') }}" class="px-4 py-2.5 bg-cyber-cyan text-cyber-bg font-bold rounded-lg text-xs uppercase tracking-wider hover:bg-cyber-cyan/90 transition-all inline-flex items-center gap-2">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+        Upload First CDR
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let dataTableInstance = null;
+
+  $(document).ready(function() {
+    {% if history %}
+    dataTableInstance = $('#history-table').DataTable({
+      order: [[3, 'desc']], // Sort by date desc
+      pageLength: 10,
+      language: {
+        search: "_INPUT_",
+        searchPlaceholder: "Search history, targets, hashes...",
+        lengthMenu: "Show _MENU_",
+        info: "Showing _START_ to _END_ of _TOTAL_ cases",
+        paginate: { previous: "‹", next: "›" }
+      },
+      drawCallback: function() {
+        lucide.createIcons();
+      }
+    });
+    {% endif %}
+    lucide.createIcons();
+  });
+
+  function filterType(type) {
+    ['all', 'single', 'cross'].forEach(t => {
+      const btn = document.getElementById(`filter-${t}`);
+      if (!btn) return;
+      if ((t === 'all' && type === 'all') || (t === 'single' && type === 'single') || (t === 'cross' && type === 'cross_match')) {
+        btn.className = "px-3 py-1 rounded text-xs font-mono bg-cyber-surface text-cyber-cyan border border-cyber-cyan/30";
+      } else {
+        btn.className = "px-3 py-1 rounded text-xs font-mono text-slate-400 hover:text-white";
+      }
+    });
+
+    if (!dataTableInstance) return;
+    if (type === 'all') {
+      dataTableInstance.search('').columns().search('').draw();
+    } else {
+      dataTableInstance.column(0).search(type === 'single' ? 'Single CDR' : 'Cross-Match').draw();
+    }
+  }
+
+  async function deleteHistoryRecord(sessionId) {
+    if (!confirm('Are you sure you want to delete this investigation from history?')) return;
+    try {
+      const res = await fetch(`/api/history/delete/${sessionId}`, { method: 'POST' });
+      if (res.ok) {
+        const row = document.getElementById(`row-${sessionId}`);
+        if (row) {
+          if (dataTableInstance) {
+            dataTableInstance.row($(row)).remove().draw();
+          } else {
+            row.remove();
+          }
+        }
+      }
+    } catch (e) {
+      alert('Error deleting record: ' + e);
+    }
+  }
+
+  async function clearAllHistory() {
+    if (!confirm('Are you sure you want to clear ALL investigation history? This action cannot be undone.')) return;
+    try {
+      const res = await fetch('/api/history/clear', { method: 'POST' });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch (e) {
+      alert('Error clearing history: ' + e);
+    }
+  }
+</script>
+{% endblock %}

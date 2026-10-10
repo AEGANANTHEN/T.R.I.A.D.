@@ -1,0 +1,2652 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Investigation Analytics — T.R.I.A.D.
+{% endblock %}
+
+
+{% block content %}
+
+<div class="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6"><style>
+  .ia-glow{box-shadow:0 0 0 1px rgba(59,130,246,.10),0 16px 50px rgba(0,0,0,.18)}
+  .ia-score-ring{background:conic-gradient(#3b82f6 var(--score,0%),rgba(148,163,184,.10) 0)}
+  .ia-network-svg text{font-family:Inter,system-ui,sans-serif}
+  .ia-empty{min-height:180px;display:flex;align-items:center;justify-content:center;border:1px dashed rgba(148,163,184,.18);border-radius:.75rem;color:#64748b;font-size:.75rem}
+</style>
+
+
+  <!-- ============================================================ -->
+  <!-- HEADER -->
+  <!-- ============================================================ -->
+
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+    <div>
+
+      <div class="flex items-center gap-2 mb-2">
+
+        <span class="text-[10px] text-muted tracking-wider">
+          ADVANCED INVESTIGATION ANALYTICS
+        </span>
+
+      </div>
+
+
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="text-2xl sm:text-3xl font-semibold text-tx">
+          Investigation Analytics
+        </h1>
+        <span id="analysisMode"
+              class="hidden text-[9px] px-2 py-1 rounded border border-accent/30 bg-accent/10 text-accent font-semibold tracking-wider">
+          CROSS-MATCH
+        </span>
+      </div>
+
+
+      <p class="text-sm text-muted mt-1 max-w-4xl">
+        Evidence-derived investigation intelligence combining communication,
+        temporal, geographic and relationship evidence into an investigator-ready
+        analytical profile. All findings remain deterministic and evidence-grounded.
+      </p>
+
+    </div>
+
+
+    <div class="flex items-center gap-2">
+
+      <div
+        id="analysisStatus"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded border border-border bg-panel text-xs text-muted"
+      >
+
+        <span
+          id="statusDot"
+          class="w-2 h-2 rounded-full bg-emerald-400"
+        ></span>
+
+        <span id="statusText">
+          ANALYTICS READY
+        </span>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- FORENSIC NOTICE -->
+  <!-- ============================================================ -->
+
+  <div
+    class="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 flex gap-3 items-start"
+  >
+
+    <i
+      data-lucide="shield-alert"
+      class="w-5 h-5 text-warning mt-0.5 flex-shrink-0"
+    ></i>
+
+
+    <div class="text-xs text-muted leading-relaxed">
+
+      <div class="text-warning font-semibold mb-1">
+        Forensic-safe analytics
+      </div>
+
+      <div>
+        This dashboard analyzes records already present in the
+        selected TRIAD CDR session. It does not modify original
+        evidence, encrypted vault objects, chain-of-custody records,
+        or the underlying static analysis.
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- TARGET / SESSION INFORMATION -->
+  <!-- ============================================================ -->
+
+  <section class="panel">
+
+    <div class="panel-header flex items-center justify-between">
+
+      <div class="flex items-center gap-2">
+
+        <i
+          data-lucide="scan-search"
+          class="w-4 h-4 text-accent"
+        ></i>
+
+        <h2 class="text-sm font-semibold text-tx">
+          Investigation Session
+        </h2>
+
+      </div>
+
+
+      <span class="text-[10px] text-muted tracking-wider">
+        DETERMINISTIC ANALYSIS
+      </span>
+
+    </div>
+
+
+    <div class="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+      <div>
+
+        <p class="text-[10px] text-muted uppercase tracking-wider">
+          Target Entity
+        </p>
+
+        <p
+          id="targetEntity"
+          class="mt-1 text-lg font-semibold text-accent font-mono break-all"
+        >
+          —
+        </p>
+
+      </div>
+
+
+      <div>
+
+        <p class="text-[10px] text-muted uppercase tracking-wider">
+          Session ID
+        </p>
+
+        <p
+          id="sessionDisplay"
+          class="mt-1 text-xs text-tx font-mono break-all"
+        >
+          —
+        </p>
+
+      </div>
+
+
+      <div>
+
+        <p class="text-[10px] text-muted uppercase tracking-wider">
+          Analysis Records
+        </p>
+
+        <p
+          id="recordCount"
+          class="mt-1 text-lg font-semibold text-tx"
+        >
+          —
+        </p>
+
+      </div>
+
+
+      <div>
+
+        <p class="text-[10px] text-muted uppercase tracking-wider">
+          Investigation Signal Score
+        </p>
+
+        <p
+          id="signalScore"
+          class="mt-1 text-lg font-semibold text-accent"
+        >
+          —
+        </p>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- INVESTIGATION POSTURE -->
+  <!-- ============================================================ -->
+
+  <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+    <div class="panel xl:col-span-2 ia-glow">
+      <div class="p-5 flex flex-col md:flex-row md:items-center gap-5">
+        <div class="shrink-0 flex items-center justify-center">
+          <div id="scoreRing" class="ia-score-ring w-24 h-24 rounded-full p-[7px]" style="--score:0%">
+            <div class="w-full h-full rounded-full bg-[#0a0a0a] flex flex-col items-center justify-center border border-border text-center" style="border-radius: 9999px !important;">
+              <span id="scoreRingValue" class="text-xl font-bold text-tx text-center leading-none">—</span>
+              <span class="text-[8px] text-muted tracking-wider text-center mt-1">SIGNAL</span>
+            </div>
+          </div>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <i data-lucide="radar" class="w-4 h-4 text-accent"></i>
+            <h2 class="text-sm font-semibold text-tx">Investigation Posture</h2>
+          </div>
+          <p id="postureText" class="text-xs text-muted leading-relaxed">
+            Loading deterministic investigation indicators…
+          </p>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <span class="px-2.5 py-1 rounded border border-border bg-panel/60 text-[10px] text-muted"><span id="postureRecords">—</span> records</span>
+            <span class="px-2.5 py-1 rounded border border-border bg-panel/60 text-[10px] text-muted"><span id="postureEntities">—</span> entities</span>
+            <span class="px-2.5 py-1 rounded border border-border bg-panel/60 text-[10px] text-muted"><span id="postureLeads">—</span> leads</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="flex items-center gap-2">
+          <i data-lucide="database-zap" class="w-4 h-4 text-accent"></i>
+          <h2 class="text-sm font-semibold text-tx">Evidence Coverage</h2>
+        </div>
+      </div>
+      <div class="p-4 space-y-3">
+        <div class="flex justify-between text-xs"><span class="text-muted">Communication</span><span id="coverageCommunication" class="text-tx font-mono">—</span></div>
+        <div class="flex justify-between text-xs"><span class="text-muted">Temporal</span><span id="coverageTemporal" class="text-tx font-mono">—</span></div>
+        <div class="flex justify-between text-xs"><span class="text-muted">Geographic</span><span id="coverageGeographic" class="text-tx font-mono">—</span></div>
+        <div class="flex justify-between text-xs"><span class="text-muted">Network</span><span id="coverageNetwork" class="text-tx font-mono">—</span></div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- KPI CARDS -->
+  <!-- ============================================================ -->
+
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+
+      <p class="kpi-label text-center">
+        Entities
+      </p>
+
+      <p
+        id="kpiEntities"
+        class="kpi-value text-center"
+      >
+        0
+      </p>
+
+    </div>
+
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+
+      <p class="kpi-label text-center">
+        Active Days
+      </p>
+
+      <p
+        id="kpiDays"
+        class="kpi-value text-center"
+      >
+        0
+      </p>
+
+    </div>
+
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+
+      <p class="kpi-label text-center">
+        Peak Hour
+      </p>
+
+      <p
+        id="kpiPeakHour"
+        class="kpi-value text-center"
+      >
+        —
+      </p>
+
+    </div>
+
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+
+      <p class="kpi-label text-center">
+        Peak Day
+      </p>
+
+      <p
+        id="kpiPeakDay"
+        class="kpi-value text-sm text-center"
+      >
+        —
+      </p>
+
+    </div>
+
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+
+      <p class="kpi-label text-center">
+        Top Contact
+      </p>
+
+      <p
+        id="kpiTopContact"
+        class="kpi-value text-sm break-all text-center"
+      >
+        —
+      </p>
+
+    </div>
+
+
+    <div class="kpi-card text-center flex flex-col items-center justify-center p-4">
+
+      <p class="kpi-label text-center">
+        Distance
+      </p>
+
+      <p
+        id="kpiDistance"
+        class="kpi-value text-sm text-center"
+      >
+        0 km
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- COMMUNICATION ANALYSIS -->
+  <!-- ============================================================ -->
+
+  <section class="panel">
+
+    <div class="panel-header flex items-center justify-between">
+
+      <div class="flex items-center gap-2">
+
+        <i
+          data-lucide="phone-call"
+          class="w-4 h-4 text-accent"
+        ></i>
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Communication Analysis
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Target-centered communication patterns
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="p-4">
+
+      <!-- Communication summary -->
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+
+        <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+          <p class="text-[10px] text-muted uppercase tracking-wider">
+            Incoming
+          </p>
+
+          <p
+            id="incomingCount"
+            class="text-xl font-semibold text-tx mt-1"
+          >
+            0
+          </p>
+
+        </div>
+
+
+        <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+          <p class="text-[10px] text-muted uppercase tracking-wider">
+            Outgoing
+          </p>
+
+          <p
+            id="outgoingCount"
+            class="text-xl font-semibold text-tx mt-1"
+          >
+            0
+          </p>
+
+        </div>
+
+
+        <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+          <p class="text-[10px] text-muted uppercase tracking-wider">
+            SMS
+          </p>
+
+          <p
+            id="smsCount"
+            class="text-xl font-semibold text-tx mt-1"
+          >
+            0
+          </p>
+
+        </div>
+
+
+        <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+          <p class="text-[10px] text-muted uppercase tracking-wider">
+            Unknown Direction
+          </p>
+
+          <p
+            id="unknownDirection"
+            class="text-xl font-semibold text-tx mt-1"
+          >
+            0
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+        <!-- Top contacts table -->
+
+        <div>
+
+          <div class="flex items-center justify-between mb-3">
+
+            <div>
+
+              <h3 class="text-sm font-semibold text-tx">
+                Primary Relationships
+              </h3>
+
+              <p class="text-[10px] text-muted mt-1">
+                Most frequently observed contacts with the target
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="overflow-x-auto">
+
+            <table class="w-full text-xs">
+
+              <thead>
+
+                <tr class="border-b border-border text-muted">
+
+                  <th class="text-left py-2 px-2 font-medium">
+                    Contact
+                  </th>
+
+                  <th class="text-right py-2 px-2 font-medium">
+                    Interactions
+                  </th>
+
+                  <th class="text-right py-2 px-2 font-medium">
+                    Duration
+                  </th>
+
+                  <th class="text-right py-2 px-2 font-medium">
+                    Strength
+                  </th>
+
+                </tr>
+
+              </thead>
+
+
+              <tbody id="contactsTable">
+
+                <tr>
+
+                  <td
+                    colspan="4"
+                    class="py-6 text-center text-muted"
+                  >
+                    Loading communication data…
+                  </td>
+
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+
+        <!-- Active numbers -->
+
+        <div>
+
+          <h3 class="text-sm font-semibold text-tx">
+            Most Active Entities
+          </h3>
+
+          <p class="text-[10px] text-muted mt-1 mb-3">
+            Entities with the highest observed interaction volume
+          </p>
+
+
+          <div
+            id="activeNumbers"
+            class="space-y-2 max-h-[310px] overflow-y-auto"
+          >
+
+            <div class="text-xs text-muted">
+              Loading…
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- TEMPORAL ANALYSIS -->
+  <!-- ============================================================ -->
+
+  <section class="panel">
+
+    <div class="panel-header">
+
+      <div class="flex items-center gap-2">
+
+        <i
+          data-lucide="clock-3"
+          class="w-4 h-4 text-accent"
+        ></i>
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Temporal Analysis
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Communication activity across time
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="p-4 grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+      <div>
+
+        <div class="flex items-center justify-between mb-3">
+
+          <div>
+
+            <h3 class="text-sm font-semibold text-tx">
+              Hourly Activity
+            </h3>
+
+            <p class="text-[10px] text-muted">
+              24-hour activity distribution
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="h-[300px]">
+
+          <canvas id="hourlyChart"></canvas>
+
+        </div>
+
+      </div>
+
+
+      <div>
+
+        <div class="flex items-center justify-between mb-3">
+
+          <div>
+
+            <h3 class="text-sm font-semibold text-tx">
+              Daily Activity
+            </h3>
+
+            <p class="text-[10px] text-muted">
+              Highest activity dates
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="h-[300px]">
+
+          <canvas id="dailyChart"></canvas>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="border-t border-border p-4">
+
+      <h3 class="text-sm font-semibold text-tx mb-3">
+        Peak Activity Windows
+      </h3>
+
+
+      <div
+        id="peakHours"
+        class="flex flex-wrap gap-2"
+      >
+
+        <span class="text-xs text-muted">
+          Loading…
+        </span>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- GEOGRAPHIC INTELLIGENCE -->
+  <!-- ============================================================ -->
+
+  <section class="panel">
+
+    <div class="panel-header flex items-center justify-between">
+
+      <div class="flex items-center gap-2">
+
+        <i
+          data-lucide="map"
+          class="w-4 h-4 text-accent"
+        ></i>
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Geographic Intelligence
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Location frequency and movement analysis
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="geoSummary"
+        class="text-[10px] text-muted"
+      >
+        0 KM
+      </div>
+
+    </div>
+
+
+    <div class="p-4">
+
+      <div
+        id="analyticsMap"
+        class="w-full h-[430px] rounded-lg border border-border overflow-hidden bg-panel"
+      ></div>
+
+    </div>
+
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 border-t border-border">
+
+      <!-- Locations -->
+
+      <div class="p-4 xl:border-r border-border">
+
+        <h3 class="text-sm font-semibold text-tx">
+          Frequent Locations
+        </h3>
+
+        <p class="text-[10px] text-muted mt-1 mb-3">
+          Most frequently observed cells / coordinates
+        </p>
+
+
+        <div class="overflow-x-auto">
+
+          <table class="w-full text-xs">
+
+            <thead>
+
+              <tr class="border-b border-border text-muted">
+
+                <th class="text-left py-2 px-2">
+                  Location
+                </th>
+
+                <th class="text-right py-2 px-2">
+                  Events
+                </th>
+
+                <th class="text-right py-2 px-2">
+                  Entities
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody id="locationsTable">
+
+              <tr>
+
+                <td
+                  colspan="3"
+                  class="py-6 text-center text-muted"
+                >
+                  Loading geographic data…
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <!-- Movement -->
+
+      <div class="p-4">
+
+        <h3 class="text-sm font-semibold text-tx">
+          Movement Summary
+        </h3>
+
+        <p class="text-[10px] text-muted mt-1 mb-4">
+          Derived from sequential geographic observations
+        </p>
+
+
+        <div class="grid grid-cols-2 gap-3">
+
+          <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+            <p class="text-[10px] text-muted uppercase">
+              Total Distance
+            </p>
+
+            <p
+              id="totalDistance"
+              class="text-xl font-semibold text-tx mt-1"
+            >
+              0 km
+            </p>
+
+          </div>
+
+
+          <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+            <p class="text-[10px] text-muted uppercase">
+              Max Observed Speed
+            </p>
+
+            <p
+              id="maxSpeed"
+              class="text-xl font-semibold text-tx mt-1"
+            >
+              0 km/h
+            </p>
+
+          </div>
+
+
+          <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+            <p class="text-[10px] text-muted uppercase">
+              First Location
+            </p>
+
+            <p
+              id="firstLocation"
+              class="text-xs text-tx mt-1 break-all"
+            >
+              —
+            </p>
+
+          </div>
+
+
+          <div class="rounded-lg border border-border bg-panel/60 p-4">
+
+            <p class="text-[10px] text-muted uppercase">
+              Last Location
+            </p>
+
+            <p
+              id="lastLocation"
+              class="text-xs text-tx mt-1 break-all"
+            >
+              —
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- NETWORK ANALYSIS -->
+  <!-- ============================================================ -->
+
+  <section class="panel">
+
+    <div class="panel-header flex items-center justify-between">
+
+      <div class="flex items-center gap-2">
+
+        <i
+          data-lucide="network"
+          class="w-4 h-4 text-accent"
+        ></i>
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Communication Network Analysis
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Central entities, relationships and communication clusters
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="networkSummary"
+        class="text-[10px] text-muted"
+      >
+        0 NODES
+      </div>
+
+    </div>
+
+
+    <div class="p-4">
+
+      <div
+        id="analyticsNetwork"
+        class="w-full h-[600px] rounded-lg border border-border bg-panel overflow-hidden"
+      ></div>
+
+    </div>
+
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 border-t border-border">
+
+      <!-- Central entities -->
+
+      <div class="p-4 xl:border-r border-border">
+
+        <h3 class="text-sm font-semibold text-tx">
+          Central Entities
+        </h3>
+
+        <p class="text-[10px] text-muted mt-1 mb-3">
+          Highest interaction strength in the analyzed network
+        </p>
+
+
+        <div
+          id="centralEntities"
+          class="space-y-2 max-h-[350px] overflow-y-auto"
+        >
+
+          <div class="text-xs text-muted">
+            Loading network data…
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Clusters -->
+
+      <div class="p-4">
+
+        <h3 class="text-sm font-semibold text-tx">
+          Communication Clusters
+        </h3>
+
+        <p class="text-[10px] text-muted mt-1 mb-3">
+          Deterministic network community detection
+        </p>
+
+
+        <div
+          id="networkClusters"
+          class="space-y-3 max-h-[350px] overflow-y-auto"
+        >
+
+          <div class="text-xs text-muted">
+            Loading clusters…
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- CROSS-MATCH FINDINGS -->
+  <!-- ============================================================ -->
+
+  <section id="crossMatchFindings" class="panel hidden">
+    <div class="panel-header">
+      <div class="flex items-center gap-2">
+        <i data-lucide="git-compare-arrows" class="w-4 h-4 text-accent"></i>
+        <div>
+          <h2 class="text-sm font-semibold text-tx">Cross-Match Findings</h2>
+          <p class="text-[10px] text-muted mt-0.5">Shared entities and spatial-temporal convergence across compared CDR datasets</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 grid grid-cols-1 xl:grid-cols-2 gap-5">
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div><h3 class="text-sm font-semibold text-tx">Shared Contacts</h3><p class="text-[10px] text-muted mt-1">Contacts observed across multiple targets</p></div>
+          <span id="sharedContactCount" class="text-[10px] text-accent font-mono">0</span>
+        </div>
+        <div id="sharedContactsList" class="space-y-2 max-h-[320px] overflow-y-auto"><div class="ia-empty">No shared-contact findings.</div></div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div><h3 class="text-sm font-semibold text-tx">Spatial-Temporal Convergence</h3><p class="text-[10px] text-muted mt-1">Cross-target observations near the same location/time</p></div>
+          <span id="colocationCount" class="text-[10px] text-accent font-mono">0</span>
+        </div>
+        <div id="colocationList" class="space-y-2 max-h-[320px] overflow-y-auto"><div class="ia-empty">No convergence findings.</div></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- INVESTIGATION LEADS -->
+  <!-- ============================================================ -->
+
+  <section class="panel">
+
+    <div class="panel-header flex items-center justify-between">
+
+      <div class="flex items-center gap-2">
+
+        <i
+          data-lucide="flag"
+          class="w-4 h-4 text-warning"
+        ></i>
+
+        <div>
+
+          <h2 class="text-sm font-semibold text-tx">
+            Investigation Leads
+          </h2>
+
+          <p class="text-[10px] text-muted mt-0.5">
+            Evidence-derived signals requiring investigator review
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <span
+        id="leadCount"
+        class="text-[10px] text-muted"
+      >
+        0 LEADS
+      </span>
+
+    </div>
+
+
+    <div
+      id="investigationLeads"
+      class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3"
+    >
+
+      <div class="text-xs text-muted">
+        Loading investigation signals…
+      </div>
+
+    </div>
+
+
+    <div class="border-t border-border px-4 py-3">
+
+      <p class="text-[10px] text-muted leading-relaxed">
+
+        <span class="text-warning font-semibold">
+          Important:
+        </span>
+
+        Investigation leads are deterministic analytical signals,
+        not findings of criminality or identity. Each lead should be
+        independently reviewed against the underlying evidence.
+
+      </p>
+
+    </div>
+
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- DATA SOURCE -->
+  <!-- ============================================================ -->
+
+  <section class="panel">
+
+    <div class="panel-header">
+
+      <div class="flex items-center gap-2">
+
+        <i
+          data-lucide="database"
+          class="w-4 h-4 text-accent"
+        ></i>
+
+        <h2 class="text-sm font-semibold text-tx">
+          Analysis Provenance
+        </h2>
+
+      </div>
+
+    </div>
+
+
+    <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+
+      <div>
+
+        <p class="text-[10px] text-muted uppercase tracking-wider">
+          Source
+        </p>
+
+        <p class="mt-1 text-tx">
+          Existing TRIAD CDR Analysis Session
+        </p>
+
+      </div>
+
+
+      <div>
+
+        <p class="text-[10px] text-muted uppercase tracking-wider">
+          Method
+        </p>
+
+        <p class="mt-1 text-tx">
+          Deterministic Python Analytics Engine
+        </p>
+
+      </div>
+
+
+      <div>
+
+        <p class="text-[10px] text-muted uppercase tracking-wider">
+          Evidence Status
+        </p>
+
+        <p class="mt-1 text-emerald-400">
+          Original Evidence Unmodified
+        </p>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+{% endblock %}
+
+
+<!-- ================================================================ -->
+<!-- PHASE 6 JAVASCRIPT -->
+<!-- ================================================================ -->
+
+{% block extra_scripts %}
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+  /* ================================================================
+     CONFIGURATION
+     ================================================================ */
+
+  const sessionId =
+    {{ session_id|tojson }};
+
+  const API_URL =
+    `/api/investigation-analytics/${encodeURIComponent(sessionId)}`;
+
+
+  /* ================================================================
+     BASIC HELPERS
+     ================================================================ */
+
+  function escapeHtml(value) {
+
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  }
+
+
+  function formatNumber(value) {
+
+    const number =
+      Number(value || 0);
+
+    return number.toLocaleString();
+
+  }
+
+
+  function formatDuration(seconds) {
+
+    const total =
+      Math.max(
+        0,
+        Number(seconds || 0)
+      );
+
+    const hours =
+      Math.floor(total / 3600);
+
+    const minutes =
+      Math.floor(
+        (total % 3600) / 60
+      );
+
+    const secs =
+      Math.floor(
+        total % 60
+      );
+
+    if (hours > 0) {
+
+      return `${hours}h ${minutes}m ${secs}s`;
+
+    }
+
+    if (minutes > 0) {
+
+      return `${minutes}m ${secs}s`;
+
+    }
+
+    return `${secs}s`;
+
+  }
+
+
+  function formatHour(hour) {
+
+    const h =
+      Number(hour);
+
+    return `${String(h).padStart(2, "0")}:00`;
+
+  }
+
+
+  function severityClasses(severity) {
+
+    const value =
+      String(
+        severity || ""
+      ).toUpperCase();
+
+
+    if (value === "HIGH") {
+
+      return {
+        border:
+          "border-rose-500/30",
+
+        bg:
+          "bg-rose-500/5",
+
+        text:
+          "text-rose-400",
+
+        icon:
+          "alert-octagon"
+      };
+
+    }
+
+
+    if (value === "MEDIUM") {
+
+      return {
+        border:
+          "border-amber-500/30",
+
+        bg:
+          "bg-amber-500/5",
+
+        text:
+          "text-amber-400",
+
+        icon:
+          "triangle-alert"
+      };
+
+    }
+
+
+    return {
+      border:
+        "border-sky-500/30",
+
+      bg:
+        "bg-sky-500/5",
+
+      text:
+        "text-sky-400",
+
+      icon:
+        "info"
+    };
+
+  }
+
+
+  /* ================================================================
+     DOM REFERENCES
+     ================================================================ */
+
+  const statusDot =
+    document.getElementById(
+      "statusDot"
+    );
+
+  const statusText =
+    document.getElementById(
+      "statusText"
+    );
+
+
+  /* ================================================================
+     CHARTS
+     ================================================================ */
+
+  let hourlyChart =
+    null;
+
+  let dailyChart =
+    null;
+
+
+
+  function destroyChart(instance) {
+    if (instance) { try { instance.destroy(); } catch (e) {} }
+    return null;
+  }
+
+  function normalizeDailyItems(daily) {
+    return (Array.isArray(daily) ? daily : [])
+      .map(item => ({
+        date: String(item?.date ?? item?.day ?? item?.label ?? "").trim(),
+        count: Number(item?.count ?? item?.events ?? 0) || 0
+      }))
+      .filter(item => item.date);
+  }
+
+  function buildCharts(data) {
+    const temporal = data?.temporal || {};
+    const hourly = Array.isArray(temporal.hourly) ? temporal.hourly : [];
+    const daily = normalizeDailyItems(temporal.daily);
+
+    const hourlyCanvas = document.getElementById("hourlyChart");
+    const dailyCanvas = document.getElementById("dailyChart");
+
+    hourlyChart = destroyChart(hourlyChart);
+    dailyChart = destroyChart(dailyChart);
+
+    if (hourlyCanvas && typeof Chart !== "undefined") {
+      const labels = Array.from({length: 24}, (_, hour) => formatHour(hour));
+      const values = Array.from({length: 24}, (_, hour) => {
+        const item = hourly.find(x => Number(x?.hour) === hour);
+        return Number(item?.count ?? item?.events ?? 0);
+      });
+
+      hourlyChart = new Chart(hourlyCanvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "CDR Events",
+            data: values,
+            backgroundColor: "rgba(59,130,246,.58)",
+            borderColor: "rgba(59,130,246,1)",
+            borderWidth: 1,
+            borderRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: {mode: "index", intersect: false},
+          plugins: {
+            legend: {display: false},
+            tooltip: {callbacks: {label: ctx => ` ${Number(ctx.raw || 0).toLocaleString()} events`}}
+          },
+          scales: {
+            x: {ticks: {color: "#64748b", maxRotation: 45, minRotation: 45, font: {size: 9}}, grid: {color: "rgba(148,163,184,.07)"}},
+            y: {beginAtZero: true, ticks: {color: "#64748b"}, grid: {color: "rgba(148,163,184,.08)"}}
+          }
+        }
+      });
+    }
+
+    if (dailyCanvas && typeof Chart !== "undefined") {
+      const items = daily.sort((a,b) => a.date.localeCompare(b.date)).slice(-31);
+
+      if (!items.length) {
+        dailyCanvas.parentElement.innerHTML =
+          '<div class="ia-empty h-full">No daily timestamp distribution returned by the analytics engine.</div>';
+        return;
+      }
+
+      dailyChart = new Chart(dailyCanvas, {
+        type: "line",
+        data: {
+          labels: items.map(item => item.date),
+          datasets: [{
+            label: "CDR Events",
+            data: items.map(item => item.count),
+            borderWidth: 2,
+            tension: 0.25,
+            fill: true,
+            backgroundColor: "rgba(34,197,94,.10)",
+            borderColor: "rgba(34,197,94,1)",
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: "#22c55e"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: {mode: "index", intersect: false},
+          plugins: {
+            legend: {display: false},
+            tooltip: {callbacks: {label: ctx => ` ${Number(ctx.raw || 0).toLocaleString()} events`}}
+          },
+          scales: {
+            x: {ticks: {color: "#64748b", maxRotation: 45, minRotation: 45, font: {size: 9}}, grid: {color: "rgba(148,163,184,.07)"}},
+            y: {beginAtZero: true, ticks: {color: "#64748b"}, grid: {color: "rgba(148,163,184,.08)"}}
+          }
+        }
+      });
+    }
+  }
+
+
+  /* ================================================================
+     COMMUNICATION
+     ================================================================ */
+
+  function renderCommunication(
+    communication
+  ) {
+
+    communication =
+      communication || {};
+
+
+    document.getElementById(
+      "incomingCount"
+    ).textContent =
+      formatNumber(
+        communication.incoming
+      );
+
+
+    document.getElementById(
+      "outgoingCount"
+    ).textContent =
+      formatNumber(
+        communication.outgoing
+      );
+
+
+    document.getElementById(
+      "smsCount"
+    ).textContent =
+      formatNumber(
+        communication.sms
+      );
+
+
+    document.getElementById(
+      "unknownDirection"
+    ).textContent =
+      formatNumber(
+        communication.unknown_direction
+      );
+
+
+    /* --------------------------------------------------------------
+       TARGET CONTACTS
+       -------------------------------------------------------------- */
+
+    const contacts =
+      communication.target_contacts
+      || [];
+
+
+    const contactsTable =
+      document.getElementById(
+        "contactsTable"
+      );
+
+
+    if (!contacts.length) {
+
+      contactsTable.innerHTML = `
+        <tr>
+          <td
+            colspan="4"
+            class="py-6 text-center text-muted"
+          >
+            No target-centered relationships available.
+          </td>
+        </tr>
+      `;
+
+    } else {
+
+      contactsTable.innerHTML =
+        contacts
+          .slice(0, 20)
+          .map(
+            item => `
+              <tr
+                class="border-b border-border/60 hover:bg-panel/60 transition"
+              >
+
+                <td class="py-2.5 px-2">
+
+                  <span
+                    class="font-mono text-accent break-all"
+                  >
+                    ${escapeHtml(
+                      item.contact
+                    )}
+                  </span>
+
+                </td>
+
+                <td
+                  class="py-2.5 px-2 text-right text-tx"
+                >
+                  ${formatNumber(
+                    item.interaction_count
+                  )}
+                </td>
+
+                <td
+                  class="py-2.5 px-2 text-right text-muted"
+                >
+                  ${escapeHtml(
+                    item.duration_hms ||
+                    formatDuration(
+                      item.total_duration_sec
+                    )
+                  )}
+                </td>
+
+                <td
+                  class="py-2.5 px-2 text-right"
+                >
+
+                  <span class="text-accent font-semibold">
+                    ${Number(
+                      item.relationship_strength || 0
+                    ).toFixed(1)}
+                  </span>
+
+                </td>
+
+              </tr>
+            `
+          )
+          .join("");
+
+    }
+
+
+    /* --------------------------------------------------------------
+       ACTIVE NUMBERS
+       -------------------------------------------------------------- */
+
+    const active =
+      communication.active_numbers
+      || [];
+
+
+    const activeContainer =
+      document.getElementById(
+        "activeNumbers"
+      );
+
+
+    if (!active.length) {
+
+      activeContainer.innerHTML =
+        `<div class="text-xs text-muted">
+          No active entities available.
+        </div>`;
+
+    } else {
+
+      activeContainer.innerHTML =
+        active
+          .slice(0, 15)
+          .map(
+            (item, index) => {
+
+              const max =
+                Number(
+                  active[0].interaction_count
+                  || 1
+                );
+
+              const value =
+                Number(
+                  item.interaction_count
+                  || 0
+                );
+
+              const width =
+                Math.max(
+                  3,
+                  Math.min(
+                    100,
+                    (value / max) * 100
+                  )
+                );
+
+
+              return `
+
+                <div
+                  class="rounded-lg border border-border bg-panel/50 p-3"
+                >
+
+                  <div
+                    class="flex items-center justify-between gap-3"
+                  >
+
+                    <div class="flex items-center gap-2 min-w-0">
+
+                      <span
+                        class="text-[10px] text-muted w-5"
+                      >
+                        ${index + 1}
+                      </span>
+
+                      <span
+                        class="font-mono text-xs text-tx truncate"
+                      >
+                        ${escapeHtml(
+                          item.number
+                        )}
+                      </span>
+
+                    </div>
+
+
+                    <span
+                      class="text-xs font-semibold text-accent"
+                    >
+                      ${formatNumber(
+                        item.interaction_count
+                      )}
+                    </span>
+
+                  </div>
+
+
+                  <div
+                    class="mt-2 h-1.5 rounded-full bg-border overflow-hidden"
+                  >
+
+                    <div
+                      class="h-full rounded-full bg-accent"
+                      style="width:${width}%"
+                    ></div>
+
+                  </div>
+
+                </div>
+
+              `;
+
+            }
+          )
+          .join("");
+
+    }
+
+  }
+
+
+  /* ================================================================
+     TEMPORAL
+     ================================================================ */
+
+  function renderTemporal(
+    temporal
+  ) {
+
+    temporal =
+      temporal || {};
+
+
+    const peakHours =
+      temporal.peak_hours
+      || [];
+
+
+    const peakContainer =
+      document.getElementById(
+        "peakHours"
+      );
+
+
+    if (!peakHours.length) {
+
+      peakContainer.innerHTML =
+        `<span class="text-xs text-muted">
+          No peak-hour information available.
+        </span>`;
+
+    } else {
+
+      peakContainer.innerHTML =
+        peakHours
+          .slice(0, 5)
+          .map(
+            item => `
+
+              <div
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-panel/60"
+              >
+
+                <i
+                  data-lucide="clock-3"
+                  class="w-3.5 h-3.5 text-accent"
+                ></i>
+
+                <span class="text-xs text-tx">
+                  ${formatHour(
+                    item.hour
+                  )}
+                </span>
+
+                <span class="text-[10px] text-muted">
+                  ${formatNumber(
+                    item.count
+                  )} events
+                </span>
+
+              </div>
+
+            `
+          )
+          .join("");
+
+    }
+
+  }
+
+
+  /* ================================================================
+     MAP
+     ================================================================ */
+
+  let analyticsMap =
+    null;
+
+  let mapMarkers = [];
+
+  let mapLine =
+    null;
+
+
+  function initializeMap() {
+
+    if (
+      typeof L === "undefined"
+    ) {
+      return;
+    }
+
+
+    const container =
+      document.getElementById(
+        "analyticsMap"
+      );
+
+
+    if (!container) {
+      return;
+    }
+
+
+    analyticsMap =
+      L.map(
+        container,
+        {
+          zoomControl: true
+        }
+      ).setView(
+        [20.5937, 78.9629],
+        5
+      );
+
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+
+        attribution:
+          "&copy; OpenStreetMap contributors"
+      }
+    ).addTo(
+      analyticsMap
+    );
+
+  }
+
+
+
+  function renderGeographic(geographic) {
+    geographic = geographic || {};
+    const distance = Number(geographic.total_distance_km || 0);
+    const maxSpeed = Number(geographic.max_leg_speed_kmh || 0);
+
+    document.getElementById("geoSummary").textContent = `${distance.toFixed(2)} KM`;
+    document.getElementById("totalDistance").textContent = `${distance.toFixed(2)} km`;
+    document.getElementById("maxSpeed").textContent = `${maxSpeed.toFixed(2)} km/h`;
+
+    const first = geographic.first_location;
+    const last = geographic.last_location;
+
+    document.getElementById("firstLocation").textContent =
+      first && first.latitude != null && first.longitude != null
+        ? `${first.latitude}, ${first.longitude}` : "—";
+    document.getElementById("lastLocation").textContent =
+      last && last.latitude != null && last.longitude != null
+        ? `${last.latitude}, ${last.longitude}` : "—";
+
+    const locations = Array.isArray(geographic.top_locations) ? geographic.top_locations : [];
+    const table = document.getElementById("locationsTable");
+
+    if (!locations.length) {
+      table.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-muted">No geographic observations available.</td></tr>`;
+    } else {
+      table.innerHTML = locations.slice(0,20).map(item => `
+        <tr class="border-b border-border/60 hover:bg-panel/50">
+          <td class="py-2.5 px-2 text-accent font-mono break-all">${escapeHtml(item.location ?? item.cell ?? item.cluster ?? "—")}</td>
+          <td class="py-2.5 px-2 text-right text-tx">${formatNumber(item.event_count ?? item.events ?? 0)}</td>
+          <td class="py-2.5 px-2 text-right text-muted">${formatNumber(item.unique_entities ?? item.entity_count ?? 0)}</td>
+        </tr>`).join("");
+    }
+
+    if (!analyticsMap) initializeMap();
+    if (!analyticsMap) return;
+
+    mapMarkers.forEach(marker => { try { analyticsMap.removeLayer(marker); } catch(e){} });
+    mapMarkers = [];
+    if (mapLine) { try { analyticsMap.removeLayer(mapLine); } catch(e){} mapLine = null; }
+
+    const movement = Array.isArray(geographic.movement) ? geographic.movement : [];
+    const validMovement = movement.filter(item =>
+      Number.isFinite(Number(item?.latitude)) &&
+      Number.isFinite(Number(item?.longitude))
+    );
+
+    const fallbackPoints = [
+      ...(Array.isArray(geographic.location_clusters) ? geographic.location_clusters : []),
+      ...locations
+    ].filter(item =>
+      Number.isFinite(Number(item?.latitude)) &&
+      Number.isFinite(Number(item?.longitude))
+    );
+
+    const points = validMovement.length ? validMovement : fallbackPoints;
+
+    if (!points.length) {
+      analyticsMap.setView([20.5937,78.9629],5);
+      return;
+    }
+
+    const path = points.map(item => [Number(item.latitude), Number(item.longitude)]);
+
+    if (validMovement.length >= 2) {
+      mapLine = L.polyline(path,{weight:3,opacity:.75}).addTo(analyticsMap);
+    }
+
+    points.slice(0,40).forEach(item => {
+      const marker = L.circleMarker(
+        [Number(item.latitude),Number(item.longitude)],
+        {radius:5,weight:2,fillOpacity:.8}
+      ).bindPopup(`
+        <div style="font-size:12px">
+          <strong>Geographic Observation</strong><br>
+          Target: ${escapeHtml(item.target || "—")}<br>
+          Time: ${escapeHtml(item.timestamp || item.first_seen || "—")}<br>
+          Coordinates: ${Number(item.latitude).toFixed(5)}, ${Number(item.longitude).toFixed(5)}<br>
+          Cell: ${escapeHtml(item.cell || item.location || item.cluster || "—")}
+        </div>`).addTo(analyticsMap);
+      mapMarkers.push(marker);
+    });
+
+    try {
+      analyticsMap.fitBounds(L.latLngBounds(path),{padding:[25,25],maxZoom:14});
+    } catch(e) {}
+    setTimeout(() => analyticsMap.invalidateSize(),100);
+  }
+
+
+  /* ================================================================
+     NETWORK
+     ================================================================ */
+
+  let analyticsNetwork =
+    null;
+
+
+
+  function renderNetwork(networkData) {
+    networkData = networkData || {};
+    const nodes = Array.isArray(networkData.nodes) ? networkData.nodes : [];
+    const edges = Array.isArray(networkData.edges) ? networkData.edges : [];
+
+    document.getElementById("networkSummary").textContent =
+      `${formatNumber(networkData.total_nodes ?? nodes.length)} NODES · ${formatNumber(networkData.total_edges ?? edges.length)} EDGES`;
+
+    const central = Array.isArray(networkData.central_nodes) ? networkData.central_nodes : [];
+    const centralContainer = document.getElementById("centralEntities");
+
+    centralContainer.innerHTML = central.length
+      ? central.slice(0,15).map((item,index) => `
+          <div class="rounded-lg border border-border bg-panel/50 p-3">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[10px] font-semibold">${index+1}</span>
+                <span class="font-mono text-xs text-tx truncate">${escapeHtml(item.number || item.contact || "—")}</span>
+                ${item.is_target ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">TARGET</span>' : ""}
+              </div>
+              <span class="text-xs font-semibold text-accent">${Number(item.interaction_strength||0).toFixed(0)}</span>
+            </div>
+            <div class="mt-2 flex items-center gap-4 text-[10px] text-muted">
+              <span>Degree: ${formatNumber(item.degree||0)}</span>
+              <span>Betweenness: ${Number(item.betweenness||0).toFixed(4)}</span>
+            </div>
+          </div>`).join("")
+      : `<div class="text-xs text-muted">No central entities available.</div>`;
+
+    const clusters = Array.isArray(networkData.clusters) ? networkData.clusters : [];
+    const clusterContainer = document.getElementById("networkClusters");
+    clusterContainer.innerHTML = clusters.length
+      ? clusters.slice(0,12).map((item,index) => `
+          <div class="rounded-lg border border-border bg-panel/50 p-3">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-xs text-tx">Cluster ${index+1}</span>
+              <span class="text-[10px] text-accent font-mono">${formatNumber(item.size || item.targets?.length || 0)} members</span>
+            </div>
+            <div class="text-[10px] text-muted mt-1 break-all">${escapeHtml(Array.isArray(item.members) ? item.members.slice(0,8).join(", ") : (item.contact || "Shared-contact cluster"))}</div>
+          </div>`).join("")
+      : `<div class="text-xs text-muted">No cluster information available.</div>`;
+
+    const container = document.getElementById("analyticsNetwork");
+    if (!container) return;
+
+    if (analyticsNetwork) {
+      try { analyticsNetwork.destroy(); } catch(e){}
+      analyticsNetwork = null;
+    }
+
+    const normalizedNodes = nodes.map(node => ({
+      ...node, number: String(node.number ?? "").trim()
+    })).filter(node => node.number);
+
+    const nodeIds = new Set(normalizedNodes.map(node => node.number));
+    const normalizedEdges = edges.map(edge => ({
+      ...edge,
+      source: String(edge.source ?? "").trim(),
+      target: String(edge.target ?? "").trim()
+    })).filter(edge =>
+      edge.source && edge.target && edge.source !== edge.target &&
+      nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    );
+
+    if (!normalizedNodes.length) {
+      container.innerHTML = `<div class="ia-empty h-full">No communication network could be derived from the verified CDR records.</div>`;
+      return;
+    }
+
+    if (typeof vis !== "undefined" && vis.Network) {
+      try {
+        const visNodes = normalizedNodes.map(node => ({
+          id: node.number,
+          label: node.number,
+          value: Math.max(12,Number(node.interaction_strength||1)/5),
+          title: `Entity: ${escapeHtml(node.number)}<br>Degree: ${formatNumber(node.degree||0)}<br>Interaction strength: ${Number(node.interaction_strength||0).toFixed(1)}<br>Betweenness: ${Number(node.betweenness||0).toFixed(4)}`,
+          color: node.is_target ? {background:"#f59e0b",border:"#fbbf24"} : {background:"#2563eb",border:"#60a5fa"}
+        }));
+
+        const visEdges = normalizedEdges.slice(0,300).map((edge,index) => ({
+          id:`edge-${index}`,
+          from:edge.source,
+          to:edge.target,
+          width:Math.max(1,Math.min(8,Number(edge.relationship_strength||1)/15)),
+          color:{color:"rgba(59,130,246,.55)",highlight:"#60a5fa",hover:"#60a5fa"},
+          arrows:{to:{enabled:false}},
+          title:`Interactions: ${formatNumber(edge.interaction_count||0)}<br>Duration: ${formatDuration(edge.duration_sec||0)}<br>Strength: ${Number(edge.relationship_strength||0).toFixed(2)}`
+        }));
+
+        analyticsNetwork = new vis.Network(container,
+          {nodes:new vis.DataSet(visNodes),edges:new vis.DataSet(visEdges)},
+          {
+            autoResize:true,
+            interaction:{hover:true,navigationButtons:true,keyboard:true,zoomView:true,dragView:true},
+            physics:{enabled:true,stabilization:{iterations:200},barnesHut:{gravitationalConstant:-5000,centralGravity:.18,springLength:150,springConstant:.035,damping:.12}},
+            nodes:{shape:"dot",size:18,borderWidth:2,font:{color:"#d4d4d4",size:11,face:"Inter,system-ui,sans-serif"}},
+            edges:{smooth:{type:"continuous"}}
+          }
+        );
+
+        setTimeout(() => {
+          try { analyticsNetwork.redraw(); analyticsNetwork.fit({animation:false}); } catch(e){}
+        },250);
+        return;
+      } catch(error) {
+        console.warn("Vis Network render failed; using SVG fallback.",error);
+      }
+    }
+
+    renderNetworkSvgFallback(container,normalizedNodes,normalizedEdges);
+  }
+
+  function renderNetworkSvgFallback(container,nodes,edges) {
+    const width=Math.max(container.clientWidth||900,700);
+    const height=Math.max(container.clientHeight||600,500);
+    const cx=width/2, cy=height/2, radius=Math.min(width,height)*.33;
+    const positions={};
+
+    nodes.forEach((node,index)=>{
+      const angle=(Math.PI*2*index/nodes.length)-Math.PI/2;
+      positions[node.number]={x:cx+Math.cos(angle)*radius,y:cy+Math.sin(angle)*radius};
+    });
+
+    const edgeSvg=edges.slice(0,300).map(edge=>{
+      const a=positions[edge.source], b=positions[edge.target];
+      if(!a||!b) return "";
+      const strength=Math.max(1,Math.min(5,Number(edge.relationship_strength||1)/20));
+      return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(59,130,246,.38)" stroke-width="${strength}" />`;
+    }).join("");
+
+    const nodeSvg=nodes.map(node=>{
+      const p=positions[node.number];
+      const r=Math.max(8,Math.min(20,8+Number(node.interaction_strength||0)/30));
+      const fill=node.is_target?"#f59e0b":"#2563eb";
+      return `<g><circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="#93c5fd" stroke-width="1.5"/><text x="${p.x}" y="${p.y+r+15}" text-anchor="middle" fill="#cbd5e1" font-size="10">${escapeHtml(node.number)}</text></g>`;
+    }).join("");
+
+    container.innerHTML=`<svg class="ia-network-svg w-full h-full" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Communication network"><rect width="100%" height="100%" fill="#0b0f16"></rect>${edgeSvg}${nodeSvg}</svg>`;
+  }
+
+
+  /* ================================================================
+     INVESTIGATION LEADS
+     ================================================================ */
+
+  function renderLeads(
+    leads
+  ) {
+
+    leads =
+      leads || [];
+
+
+    const container =
+      document.getElementById(
+        "investigationLeads"
+      );
+
+
+    document.getElementById(
+      "leadCount"
+    ).textContent =
+      `${formatNumber(
+        leads.length
+      )} LEADS`;
+
+
+    if (!leads.length) {
+
+      container.innerHTML = `
+
+        <div
+          class="lg:col-span-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-5"
+        >
+
+          <div class="flex items-center gap-3">
+
+            <i
+              data-lucide="shield-check"
+              class="w-5 h-5 text-emerald-400"
+            ></i>
+
+            <div>
+
+              <p class="text-sm font-semibold text-emerald-400">
+                No investigation signals detected
+              </p>
+
+              <p class="text-xs text-muted mt-1">
+                No deterministic investigation leads were generated
+                from the available analysis.
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    container.innerHTML =
+      leads.map(
+        lead => {
+
+          const classes =
+            severityClasses(
+              lead.severity
+            );
+
+
+          return `
+
+            <div
+              class="rounded-lg border ${classes.border} ${classes.bg} p-4"
+            >
+
+              <div
+                class="flex items-start gap-3"
+              >
+
+                <div
+                  class="w-9 h-9 rounded-lg border ${classes.border} flex items-center justify-center flex-shrink-0"
+                >
+
+                  <i
+                    data-lucide="${classes.icon}"
+                    class="w-4 h-4 ${classes.text}"
+                  ></i>
+
+                </div>
+
+
+                <div class="min-w-0 flex-1">
+
+                  <div
+                    class="flex flex-wrap items-center gap-2"
+                  >
+
+                    <span
+                      class="text-[9px] px-2 py-1 rounded border ${classes.border} ${classes.text} font-semibold tracking-wider"
+                    >
+                      ${escapeHtml(
+                        lead.severity
+                      )}
+                    </span>
+
+                    <span
+                      class="text-[9px] px-2 py-1 rounded border border-border text-muted"
+                    >
+                      ${escapeHtml(
+                        lead.type
+                      )}
+                    </span>
+
+                  </div>
+
+
+                  <h3
+                    class="text-sm font-semibold text-tx mt-2"
+                  >
+                    ${escapeHtml(
+                      lead.title
+                    )}
+                  </h3>
+
+
+                  <p
+                    class="text-xs text-muted leading-relaxed mt-1"
+                  >
+                    ${escapeHtml(
+                      lead.detail
+                    )}
+                  </p>
+
+
+                  <p
+                    class="text-[10px] text-muted mt-2"
+                  >
+
+                    <span class="text-tx">
+                      Basis:
+                    </span>
+
+                    ${escapeHtml(
+                      lead.basis
+                    )}
+
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join("");
+
+  }
+
+
+  /* ================================================================
+     SUMMARY
+     ================================================================ */
+
+  function renderSummary(
+    summary
+  ) {
+
+    summary =
+      summary || {};
+
+
+    document.getElementById(
+      "targetEntity"
+    ).textContent =
+      summary.target || "—";
+
+
+    document.getElementById(
+      "sessionDisplay"
+    ).textContent =
+      sessionId;
+
+
+    document.getElementById(
+      "recordCount"
+    ).textContent =
+      formatNumber(
+        summary.total_records
+      );
+
+
+    document.getElementById(
+      "signalScore"
+    ).textContent =
+      `${formatNumber(
+        summary.investigation_signal_score
+      )}/100`;
+
+
+    document.getElementById(
+      "kpiEntities"
+    ).textContent =
+      formatNumber(
+        summary.unique_entities
+      );
+
+
+    document.getElementById(
+      "kpiDays"
+    ).textContent =
+      formatNumber(
+        summary.active_days
+      );
+
+
+    document.getElementById(
+      "kpiPeakHour"
+    ).textContent =
+      summary.peak_hour !== null &&
+      summary.peak_hour !== undefined
+        ? formatHour(
+            summary.peak_hour
+          )
+        : "—";
+
+
+    document.getElementById(
+      "kpiPeakDay"
+    ).textContent =
+      summary.peak_day || "—";
+
+
+    const topContact =
+      summary.top_contact;
+
+
+    document.getElementById(
+      "kpiTopContact"
+    ).textContent =
+      topContact
+        ? topContact.contact
+        : "—";
+
+
+    document.getElementById(
+      "kpiDistance"
+    ).textContent =
+      `${Number(
+        summary.total_distance_km || 0
+      ).toFixed(2)} km`;
+
+  }
+
+  /* ================================================================
+     INVESTIGATION POSTURE / CROSS-MATCH FINDINGS
+     ================================================================ */
+
+  function renderPosture(data) {
+    const summary = data?.summary || {};
+    const communication = data?.communication || {};
+    const temporal = data?.temporal || {};
+    const geographic = data?.geographic || {};
+    const network = data?.network || {};
+    const leads = Array.isArray(data?.leads) ? data.leads : [];
+
+    const score = Math.max(0, Math.min(100, Number(summary.investigation_signal_score || 0)));
+    document.getElementById("scoreRing").style.setProperty("--score", `${score}%`);
+    document.getElementById("scoreRingValue").textContent = Math.round(score);
+    document.getElementById("postureRecords").textContent = formatNumber(summary.total_records || 0);
+    document.getElementById("postureEntities").textContent = formatNumber(summary.unique_entities || network.total_nodes || 0);
+    document.getElementById("postureLeads").textContent = formatNumber(leads.length);
+
+    const shared = Number(summary.mutual_contacts || data?.cross_match?.common_contacts?.length || 0);
+    const convergence = Number(summary.colocation_events || data?.cross_match?.colocation?.length || 0);
+
+    let posture = "Limited analytical signal in the available evidence.";
+    if (score >= 70) {
+      posture = `High analytical signal: ${shared} shared contact finding(s) and ${convergence} spatial-temporal convergence event(s) are present for investigator review.`;
+    } else if (score >= 45) {
+      posture = "Moderate analytical signal: the dataset contains cross-evidence patterns that warrant targeted investigator review.";
+    } else if (shared || convergence) {
+      posture = `Focused review recommended: ${shared} shared contact finding(s) and ${convergence} convergence event(s) were identified.`;
+    }
+
+    document.getElementById("postureText").textContent = posture;
+
+    const communicationCoverage =
+      Number(communication.incoming || 0) +
+      Number(communication.outgoing || 0) +
+      Number(communication.sms || 0);
+
+    document.getElementById("coverageCommunication").textContent =
+      communicationCoverage ? `${communicationCoverage.toLocaleString()} events` : "LIMITED";
+
+    const dailyCount = Array.isArray(temporal.daily) ? temporal.daily.length : 0;
+    document.getElementById("coverageTemporal").textContent =
+      dailyCount ? `${dailyCount} active day${dailyCount === 1 ? "" : "s"}` : "LIMITED";
+
+    const geoPoints = Array.isArray(geographic.movement)
+      ? geographic.movement.filter(p => Number.isFinite(Number(p?.latitude)) && Number.isFinite(Number(p?.longitude))).length
+      : 0;
+
+    document.getElementById("coverageGeographic").textContent =
+      geoPoints ? `${geoPoints.toLocaleString()} observations` : "NO COORDINATES";
+
+    document.getElementById("coverageNetwork").textContent =
+      network.total_nodes ? `${formatNumber(network.total_nodes)} nodes` : "NO NETWORK";
+
+    if (data?.mode === "cross_match") {
+      document.getElementById("analysisMode").classList.remove("hidden");
+    }
+  }
+
+  function renderCrossMatchFindings(data) {
+    const section = document.getElementById("crossMatchFindings");
+    if (!section || data?.mode !== "cross_match") return;
+
+    section.classList.remove("hidden");
+
+    const cross = data.cross_match || {};
+    const contacts = Array.isArray(cross.common_contacts) ? cross.common_contacts : [];
+    const colocation = Array.isArray(cross.colocation) ? cross.colocation : [];
+
+    document.getElementById("sharedContactCount").textContent = `${contacts.length} FINDINGS`;
+    document.getElementById("colocationCount").textContent = `${colocation.length} EVENTS`;
+
+    const shared = document.getElementById("sharedContactsList");
+    shared.innerHTML = contacts.length
+      ? contacts.slice(0,20).map(item => `
+          <div class="rounded-lg border border-border bg-panel/50 p-3">
+            <div class="flex items-center justify-between gap-3">
+              <span class="font-mono text-xs text-accent break-all">${escapeHtml(item.contact || "UNKNOWN")}</span>
+              <span class="text-[10px] text-tx font-semibold">${formatNumber(item.target_count || 0)} targets</span>
+            </div>
+            <div class="text-[10px] text-muted mt-1">Shared across the compared CDR datasets.</div>
+          </div>`).join("")
+      : '<div class="ia-empty">No shared-contact findings.</div>';
+
+    const convergence = document.getElementById("colocationList");
+    convergence.innerHTML = colocation.length
+      ? colocation.slice(0,20).map(item => `
+          <div class="rounded-lg border border-border bg-panel/50 p-3">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-xs text-tx">${escapeHtml(item.target_a || "Target A")} ↔ ${escapeHtml(item.target_b || "Target B")}</span>
+              <span class="text-[10px] text-accent font-mono">${escapeHtml(String(item.diff_minutes ?? "?"))} min</span>
+            </div>
+            <div class="text-[10px] text-muted mt-1">Cell: ${escapeHtml(item.cell_id || "—")}</div>
+          </div>`).join("")
+      : '<div class="ia-empty">No convergence findings.</div>';
+  }
+
+
+  /* ================================================================
+     LOAD ANALYTICS
+     ================================================================ */
+
+  async function loadAnalytics() {
+
+    try {
+
+      statusText.textContent =
+        "LOADING ANALYTICS";
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-amber-400";
+
+
+      const response =
+        await fetch(
+          API_URL,
+          {
+            headers: {
+              "Accept":
+                "application/json"
+            }
+          }
+        );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      const data =
+        await response.json();
+
+
+      if (
+        data.error
+      ) {
+
+        throw new Error(
+          data.error
+        );
+
+      }
+
+
+      renderSummary(
+        data.summary
+      );
+
+      renderPosture(data);
+      renderCrossMatchFindings(data);
+
+
+      renderCommunication(
+        data.communication
+      );
+
+
+      renderTemporal(
+        data.temporal
+      );
+
+
+      renderGeographic(
+        data.geographic
+      );
+
+
+      renderNetwork(
+        data.network
+      );
+
+
+      renderLeads(
+        data.leads
+      );
+
+
+      buildCharts(
+        data
+      );
+
+
+      statusText.textContent =
+        "ANALYTICS READY";
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-emerald-400";
+
+
+      if (
+        typeof lucide !== "undefined"
+      ) {
+
+        lucide.createIcons();
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Investigation analytics error:",
+        error
+      );
+
+
+      statusText.textContent =
+        "ANALYTICS ERROR";
+
+      statusDot.className =
+        "w-2 h-2 rounded-full bg-rose-400";
+
+
+      const leadContainer =
+        document.getElementById(
+          "investigationLeads"
+        );
+
+
+      leadContainer.innerHTML = `
+
+        <div
+          class="lg:col-span-2 rounded-lg border border-rose-500/30 bg-rose-500/5 p-5"
+        >
+
+          <div class="flex items-center gap-3">
+
+            <i
+              data-lucide="circle-alert"
+              class="w-5 h-5 text-rose-400"
+            ></i>
+
+            <div>
+
+              <p class="text-sm font-semibold text-rose-400">
+                Unable to load investigation analytics
+              </p>
+
+              <p class="text-xs text-muted mt-1">
+                ${escapeHtml(
+                  error.message
+                )}
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      `;
+
+
+      if (
+        typeof lucide !== "undefined"
+      ) {
+
+        lucide.createIcons();
+
+      }
+
+    }
+
+  }
+
+
+  /* ================================================================
+     INITIALIZATION
+     ================================================================ */
+
+  if (
+    typeof lucide !== "undefined"
+  ) {
+
+    lucide.createIcons();
+
+  }
+
+
+  initializeMap();
+
+  window.addEventListener('resize', () => {
+    if (analyticsMap) {
+      setTimeout(() => analyticsMap.invalidateSize(), 100);
+    }
+    if (analyticsNetwork) {
+      try { analyticsNetwork.redraw(); } catch (e) {}
+    }
+  });
+
+  loadAnalytics();
+
+});
+
+</script>
+
+{% endblock %}

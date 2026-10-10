@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forensic Intelligence Report — {{ data.target if data.type != 'cross_match' else (data.targets | join(', ')) }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}?v=20261007_v2" />
+
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: #f5f5f5;
+      background-color: #000000;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    .chart-card {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      background-color: #0d0d0d !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    .report-container {
+      background-color: #0a0a0a !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      color: #ffffff !important;
+    }
+    .report-container h1, .report-container h2, .report-container h3 {
+      color: #ffffff !important;
+    }
+    .report-container .bg-slate-50,
+    .report-container .bg-slate-100 {
+      background-color: #111111 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #e5e5e5 !important;
+    }
+    .report-container .text-slate-900,
+    .report-container .text-slate-950,
+    .report-container .text-slate-800 {
+      color: #ffffff !important;
+    }
+    .report-container .text-slate-700,
+    .report-container .text-slate-600 {
+      color: #a1a1aa !important;
+    }
+    .report-container .border-slate-900 {
+      border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    .report-container .border-slate-300,
+    .report-container .border-slate-200 {
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    .report-container table thead {
+      background-color: #141414 !important;
+      color: #a1a1aa !important;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      .report-container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      .report-container * {
+        color: #000000 !important;
+        background-color: transparent !important;
+        border-color: #e2e8f0 !important;
+      }
+      canvas {
+        max-width: 100% !important;
+        height: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="p-4 sm:p-8 antialiased">
+
+  <!-- ── Top Action Bar (hidden on print) ───────────────────────── -->
+  <div class="max-w-5xl mx-auto mb-6 flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-900 text-white rounded-xl shadow-xl no-print">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center">
+        <i data-lucide="file-check-2" class="w-5 h-5 text-sky-400"></i>
+      </div>
+      <div>
+        <h2 class="text-sm font-bold tracking-wide uppercase font-mono text-sky-400">Forensic Intelligence Dossier</h2>
+        <p class="text-xs text-slate-400">Print-ready official T.R.I.A.D. forensic analysis report with full analytics graphs</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button onclick="window.print()" class="btn btn-primary btn-sm shadow-md shadow-blue-500/20">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+        Print / PDF
+      </button>
+      <a href="{{ url_for('export_excel', session_id=session_id) }}" download="CDR_Forensic_Report_{{ session_id[:8] }}.xlsx" class="btn btn-success btn-sm shadow-md shadow-emerald-500/20">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        Excel (.XLSX)
+      </a>
+      <a href="{{ url_for('export_csv', session_id=session_id) }}" download="CDR_Records_{{ session_id[:8] }}.csv" class="btn btn-warning btn-sm shadow-md shadow-amber-500/20">
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        CSV
+      </a>
+      <a href="{{ url_for('export_json', session_id=session_id) }}" download="CDR_Dossier_{{ session_id[:8] }}.json" class="btn btn-purple btn-sm shadow-md shadow-purple-500/20">
+        <i data-lucide="code" class="w-4 h-4"></i>
+        JSON
+      </a>
+      <a href="javascript:history.back()" class="btn btn-secondary btn-sm">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        Back
+      </a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- FORMAL FORENSIC REPORT CONTAINER                               -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="report-container max-w-5xl mx-auto bg-white border border-slate-300 rounded-xl shadow-md p-8 sm:p-12 space-y-8">
+
+    <!-- ── Report Header & Classification ────────────────────────── -->
+    <div class="border-b-2 border-slate-900 pb-6">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-2.5 py-1 bg-red-100 border border-red-300 text-red-800 text-[10px] font-mono font-bold tracking-widest uppercase rounded">
+              CONFIDENTIAL // LAW ENFORCEMENT SENSITIVE
+            </span>
+            <span class="px-2.5 py-1 bg-slate-100 border border-slate-300 text-slate-700 text-[10px] font-mono font-bold tracking-widest uppercase rounded">
+              ISO/IEC 27037 FORENSIC STANDARD
+            </span>
+          </div>
+          <h1 class="text-2xl font-extrabold text-slate-950 tracking-tight">
+            TELECOM FORENSIC INTELLIGENCE DOSSIER
+          </h1>
+          <p class="text-xs text-slate-600 font-mono mt-1">
+            Automated Call Detail Record (CDR) Examination & Link Analysis
+          </p>
+        </div>
+        <div class="text-right text-xs font-mono text-slate-600">
+          <div>Report ID: <span class="font-bold text-slate-900">{{ session_id[:13] }}...</span></div>
+          <div>Generated: <span class="font-bold text-slate-900">{{ generated_at }}</span></div>
+          <div>Case Ref: <span class="font-bold text-slate-900">{{ data.case_ref if data.case_ref else 'CASE-AUTO-REF' }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Chain of Custody & Evidence Metadata ───────────────────── -->
+    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs font-mono space-y-2">
+      <div class="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+        Digital Evidence & Chain of Custody
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-slate-700">
+        <div><span class="text-slate-500">Source File:</span> {{ data.filename if data.type != 'cross_match' else (data.filenames | join(', ')) }}</div>
+        <div><span class="text-slate-500">Analysis Mode:</span> {{ 'Single CDR Deep Inspection' if data.type != 'cross_match' else 'Multi-Target Cross-Match' }}</div>
+        <div class="md:col-span-2 break-all">
+          <span class="text-slate-500">SHA-256 Hash:</span> 
+          <span class="text-slate-900 font-semibold">{{ data.metadata.sha256 if data.metadata and data.metadata.sha256 else (data.sha256 if data.sha256 else 'Calculated on ingest') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- SECTION: SINGLE CDR ANALYSIS REPORT                            -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    {% if data.type != 'cross_match' %}
+
+    <!-- 1. Executive Summary & KPIs -->
+    <div>
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+        <i data-lucide="target" class="w-4 h-4 text-sky-600"></i>
+        1. Target Subscriber Profile & Executive Summary
+      </h2>
+      
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Target Identity</div>
+          <div class="text-base font-bold font-mono text-slate-900">{{ data.target | default('Target') }}</div>
+        </div>
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Total Records</div>
+          <div class="text-base font-bold font-mono text-sky-700">{{ "{:,}".format(data.kpis.total_records if data.kpis and data.kpis.total_records else 0) }}</div>
+        </div>
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Unique Contacts</div>
+          <div class="text-base font-bold font-mono text-emerald-700">{{ data.kpis.unique_contacts if data.kpis and data.kpis.unique_contacts else 0 }}</div>
+        </div>
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Total Talk Time</div>
+          <div class="text-base font-bold font-mono text-slate-900">{{ data.kpis.total_duration_hms if data.kpis and data.kpis.total_duration_hms else '—' }}</div>
+        </div>
+      </div>
+
+      <!-- Additional Metrics Grid -->
+      <table class="w-full text-xs font-mono border border-slate-200 rounded-lg">
+        <tbody class="divide-y divide-slate-200">
+          <tr class="bg-slate-50">
+            <td class="p-2.5 font-semibold text-slate-600">Date Range of Activity</td>
+            <td class="p-2.5 text-slate-900 font-bold">{{ data.kpis.date_range if data.kpis and data.kpis.date_range else '—' }}</td>
+            <td class="p-2.5 font-semibold text-slate-600">Night Calls (00:00–05:00)</td>
+            <td class="p-2.5 text-red-600 font-bold">{{ data.kpis.night_calls if data.kpis and data.kpis.night_calls else 0 }} calls</td>
+          </tr>
+          <tr>
+            <td class="p-2.5 font-semibold text-slate-600">Incoming vs Outgoing</td>
+            <td class="p-2.5 text-slate-900">{{ data.kpis.incoming if data.kpis and data.kpis.incoming else 0 }} in / {{ data.kpis.outgoing if data.kpis and data.kpis.outgoing else 0 }} out</td>
+            <td class="p-2.5 font-semibold text-slate-600">Handsets (IMEI Count)</td>
+            <td class="p-2.5 {{ 'text-amber-600 font-bold' if (data.kpis and data.kpis.imei_count and data.kpis.imei_count > 1) else 'text-slate-900' }}">{{ data.kpis.imei_count if data.kpis and data.kpis.imei_count else 1 }} handset(s)</td>
+          </tr>
+          <tr class="bg-slate-50">
+            <td class="p-2.5 font-semibold text-slate-600">SMS / Text Volume</td>
+            <td class="p-2.5 text-slate-900">{{ data.kpis.sms_count if data.kpis and data.kpis.sms_count else 0 }} messages</td>
+            <td class="p-2.5 font-semibold text-slate-600">SIM Cards (IMSI Count)</td>
+            <td class="p-2.5 text-slate-900">{{ data.kpis.imsi_count | default(1) }} SIM(s)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- 2. FORENSIC CHARTS & BEHAVIORAL PROFILES (SINGLE TARGET)       -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <div class="space-y-4">
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 flex items-center gap-2">
+        <i data-lucide="bar-chart-2" class="w-4 h-4 text-sky-600"></i>
+        2. Forensic Behavioral & Temporal Analytics Graphs
+      </h2>
+
+      <!-- Row 1: 24h Distribution & Weekly Routine -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Chart 1: 24-Hour Call Frequency -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">24-Hour Call Activity Profile</h3>
+            <span class="text-[10px] font-mono text-red-600 font-bold">Night: 00:00–05:00</span>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="reportHourlyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Weekly Routine Radar -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">Day-of-Week Behavioral Pattern</h3>
+            <span class="text-[10px] font-mono text-slate-500">Mon–Sun Distribution</span>
+          </div>
+          <div class="h-56 relative flex items-center justify-center">
+            <canvas id="reportDowChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Call Type Breakdown & Top Communicators Chart -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Chart 3: Call Direction & Type -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">Call Type & Direction Split</h3>
+            <span class="text-[10px] font-mono text-slate-500">Traffic Distribution</span>
+          </div>
+          <div class="h-56 relative flex items-center justify-center">
+            <canvas id="reportCallTypeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: Top Communicators Volume -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">Top 5 Interlocutors Volume</h3>
+            <span class="text-[10px] font-mono text-slate-500">Call Count</span>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="reportTopContactsChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Forensic Anomalies & Threat Indicators -->
+    {% set travel_count = data.impossible_travel | length %}
+    {% set swap_flag = data.device_swaps.handset_hopping or data.device_swaps.sim_swapping %}
+    <div class="chart-card">
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+        <i data-lucide="zap" class="w-4 h-4 text-red-600"></i>
+        3. Forensic Anomaly & Velocity Findings
+      </h2>
+
+      {% if travel_count > 0 or swap_flag %}
+      <div class="space-y-3 mb-4">
+        {% if travel_count > 0 %}
+        <div class="p-3 bg-red-50 border-l-4 border-red-600 rounded text-xs text-red-900">
+          <span class="font-bold">⚠ IMPOSSIBLE TRAVEL DETECTED:</span>
+          Found {{ travel_count }} event(s) where consecutive cell tower pings required speeds exceeding 900 km/h (Haversine formula calculation).
+        </div>
+        {% endif %}
+        {% if data.device_swaps.handset_hopping %}
+        <div class="p-3 bg-amber-50 border-l-4 border-amber-600 rounded text-xs text-amber-900">
+          <span class="font-bold">⚠ HANDSET HOPPING DETECTED:</span>
+          Subscriber used {{ data.device_swaps.imei_count }} distinct IMEI devices during this period.
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="p-3 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800 flex items-center gap-2">
+        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+        No critical impossible travel anomalies or SIM hopping detected in this dataset.
+      </div>
+      {% endif %}
+
+      <!-- Impossible Travel Table -->
+      {% if travel_count > 0 %}
+      <div class="overflow-x-auto mt-3">
+        <table class="w-full text-xs font-mono border border-slate-200">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="p-2 text-left">From Tower</th>
+              <th class="p-2 text-left">To Tower</th>
+              <th class="p-2 text-right">Distance (km)</th>
+              <th class="p-2 text-right">Time Delta</th>
+              <th class="p-2 text-right">Calculated Speed</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for item in data.impossible_travel %}
+            <tr>
+              <td class="p-2 font-bold text-slate-800">{{ item.from_cell }}</td>
+              <td class="p-2 font-bold text-slate-800">{{ item.to_cell }}</td>
+              <td class="p-2 text-right">{{ item.distance_km }} km</td>
+              <td class="p-2 text-right">{{ item.delta_minutes }} min</td>
+              <td class="p-2 text-right font-bold text-red-700">{{ item.speed_kmh }} km/h</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- 4. Top Communicators & Contact Frequency -->
+    <div class="chart-card">
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+        <i data-lucide="phone" class="w-4 h-4 text-sky-600"></i>
+        4. Top Interlocutors (Most Frequent Contacts)
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs font-mono border border-slate-200">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="p-2 text-left">Rank</th>
+              <th class="p-2 text-left">Phone Number / Interlocutor</th>
+              <th class="p-2 text-right">Total Calls</th>
+              <th class="p-2 text-right">Duration (Sec)</th>
+              <th class="p-2 text-right">% of Activity</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for c in data.top_contacts[:15] %}
+            {% set cnt = c.call_count if c.call_count is defined else (c.count if c.count is defined else 0) %}
+            {% set dur = c.total_duration if c.total_duration is defined else (c.duration if c.duration is defined else 0) %}
+            <tr>
+              <td class="p-2 text-slate-500 font-bold">#{{ loop.index }}</td>
+              <td class="p-2 font-bold text-slate-900">{{ c.contact }}</td>
+              <td class="p-2 text-right font-bold text-sky-700">{{ cnt }}</td>
+              <td class="p-2 text-right text-slate-700">{{ dur }}s</td>
+              <td class="p-2 text-right text-slate-500">
+                {% if data.kpis and data.kpis.total_records and data.kpis.total_records > 0 %}
+                {{ "%.1f"|format(cnt / data.kpis.total_records * 100) }}%
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- SECTION: MULTI-CDR CROSS MATCH REPORT                          -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    {% else %}
+
+    <!-- 1. Cross-Match Target Matrix -->
+    <div>
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+        <i data-lucide="users" class="w-4 h-4 text-amber-600"></i>
+        1. Multi-Target Target Overview
+      </h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Targets Analyzed</div>
+          <div class="text-base font-bold font-mono text-slate-900">{{ data.labels | length }} Suspects</div>
+        </div>
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Mutual Contacts</div>
+          <div class="text-base font-bold font-mono text-amber-600">{{ data.common_contacts | length }}</div>
+        </div>
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Co-location Events</div>
+          <div class="text-base font-bold font-mono text-red-600">{{ data.colocation | length }}</div>
+        </div>
+        <div class="p-3 border border-slate-200 rounded-lg bg-slate-50">
+          <div class="text-[10px] text-slate-500 font-mono uppercase">Total Records</div>
+          <div class="text-base font-bold font-mono text-emerald-700">{{ "{:,}".format(data.records_count if data.records_count else 0) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- 2. MULTI-TARGET COMPARATIVE ANALYTICS GRAPHS                   -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <div class="space-y-4">
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 flex items-center gap-2">
+        <i data-lucide="bar-chart-2" class="w-4 h-4 text-amber-600"></i>
+        2. Cross-Target Comparative Analytics Graphs
+      </h2>
+
+      <!-- Row 1: 24h Activity Curve & Weekly Routine Radar -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Multi-Target 24h Curve -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">24-Hour Activity Overlay</h3>
+            <span class="text-[10px] font-mono text-slate-500">Multi-Target Synchrony</span>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="crossHourlyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Multi-Target Weekly Radar -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">Weekly Routine Overlay</h3>
+            <span class="text-[10px] font-mono text-slate-500">Mon–Sun Comparison</span>
+          </div>
+          <div class="h-56 relative flex items-center justify-center">
+            <canvas id="crossDowChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Call Type Breakdown & Threat Radar -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Call Type Grouped Bar -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">Call Type & Direction by Target</h3>
+            <span class="text-[10px] font-mono text-slate-500">Grouped Breakdown</span>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="crossTypeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Forensic Risk Radar -->
+        <div class="chart-card bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold font-mono text-slate-800 uppercase">Forensic Threat Profile Radar</h3>
+            <span class="text-[10px] font-mono text-red-600 font-bold">Anomaly Metrics</span>
+          </div>
+          <div class="h-56 relative flex items-center justify-center">
+            <canvas id="crossRiskChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Mutual / Shared Contacts Table -->
+    <div class="chart-card">
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+        <i data-lucide="git-merge" class="w-4 h-4 text-amber-600"></i>
+        3. Mutual / Shared Intermediary Contacts
+      </h2>
+      {% if data.common_contacts %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs font-mono border border-slate-200">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="p-2 text-left">Contact Number</th>
+              <th class="p-2 text-left">Present in Targets</th>
+              <th class="p-2 text-right">Target Count</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for c in data.common_contacts %}
+            <tr>
+              <td class="p-2 font-bold text-slate-900">{{ c.contact }}</td>
+              <td class="p-2 text-slate-700">{{ c.present_in | join(', ') }}</td>
+              <td class="p-2 text-right font-bold text-amber-700">{{ c.target_count }} Targets</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-xs font-mono text-slate-500">No mutual contacts detected across target datasets.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4. Co-location Convergence Events -->
+    {% if data.colocation %}
+    <div class="chart-card">
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+        <i data-lucide="map-pin" class="w-4 h-4 text-red-600"></i>
+        4. Spatial Convergence & Co-location Events (±15 min)
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs font-mono border border-slate-200">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="p-2 text-left">Cell Tower</th>
+              <th class="p-2 text-left">Target A</th>
+              <th class="p-2 text-left">Target B</th>
+              <th class="p-2 text-left">Time A</th>
+              <th class="p-2 text-left">Time B</th>
+              <th class="p-2 text-right">Delta Time</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for e in data.colocation[:30] %}
+            <tr>
+              <td class="p-2 font-bold text-amber-800">{{ e.cell_id }}</td>
+              <td class="p-2 text-slate-800">{{ e.target_a }}</td>
+              <td class="p-2 text-slate-800">{{ e.target_b }}</td>
+              <td class="p-2 text-slate-600">{{ e.time_a }}</td>
+              <td class="p-2 text-slate-600">{{ e.time_b }}</td>
+              <td class="p-2 text-right font-bold text-red-700">{{ e.diff_minutes }} min</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    <!-- ── Investigator Certification & Sign-off Box ─────────────── -->
+    <div class="border-t-2 border-slate-900 pt-6 mt-8 space-y-4 chart-card">
+      <h3 class="text-xs font-bold uppercase tracking-wider font-mono text-slate-900">
+        5. Official Investigator Certification & Notes
+      </h3>
+      <div class="p-4 border border-dashed border-slate-300 rounded-lg min-h-[80px] text-xs font-mono text-slate-400">
+        [ Investigator / Analyst Notes & Observations ]
+      </div>
+      <div class="grid grid-cols-2 gap-8 pt-4 text-xs font-mono text-slate-700">
+        <div>
+          <div class="border-b border-slate-400 pb-8 mb-1"></div>
+          <div>Forensic Analyst Signature</div>
+          <div class="text-[10px] text-slate-500">Name / Rank: ____________________</div>
+        </div>
+        <div>
+          <div class="border-b border-slate-400 pb-8 mb-1"></div>
+          <div>Supervising Officer / Date</div>
+          <div class="text-[10px] text-slate-500">Date: {{ generated_at }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Footer ────────────────────────────────────────────────── -->
+    <div class="border-t border-slate-200 pt-4 text-center text-[10px] font-mono text-slate-400">
+      Generated automatically by T.R.I.A.D. — Telecom Records & Intelligence Analysis Dashboard v2.0 • Digital Chain of Custody Verified
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- STATIC FORENSIC CHARTS INITIALIZATION (PRINT OPTIMIZED)         -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <script>
+    lucide.createIcons();
+
+    // Chart.js global defaults for crisp print & PDF export
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    Chart.defaults.color = "#334155";
+    Chart.defaults.animation = false; // Essential: instant static rendering for PDF export
+
+    const DATA = {{ data | tojson }};
+
+    // ─────────────────────────────────────────────────────────────────
+    // SINGLE CDR GRAPHS
+    // ─────────────────────────────────────────────────────────────────
+    if (DATA.type !== 'cross_match') {
+      // 1. Hourly Chart
+      const hourlyCanvas = document.getElementById('reportHourlyChart');
+      if (hourlyCanvas && DATA.hourly) {
+        const labels = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0') + ':00');
+        const hourMap = new Map((DATA.hourly || []).map(h => [h.hour, h.count]));
+        const counts = Array.from({length: 24}, (_, i) => hourMap.get(i) || 0);
+        const bgColors = counts.map((_, i) => (i <= 4) ? '#f43f5e' : (i >= 22 ? '#f59e0b' : '#0284c7'));
+
+        new Chart(hourlyCanvas, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Calls',
+              data: counts,
+              backgroundColor: bgColors,
+              borderRadius: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+              y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 9 } } }
+            }
+          }
+        });
+      }
+
+      // 2. Day-of-Week Radar
+      const dowCanvas = document.getElementById('reportDowChart');
+      if (dowCanvas && DATA.dow) {
+        const dows = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const dowMap = new Map((DATA.dow || []).map(d => [d.dow, d.count]));
+        const dowCounts = dows.map(d => dowMap.get(d) || 0);
+
+        new Chart(dowCanvas, {
+          type: 'radar',
+          data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+              label: 'Calls by Day',
+              data: dowCounts,
+              backgroundColor: 'rgba(2, 132, 199, 0.25)',
+              borderColor: '#0284c7',
+              pointBackgroundColor: '#0284c7',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              r: {
+                grid: { color: '#e2e8f0' },
+                ticks: { backdropColor: 'transparent', font: { size: 8 } }
+              }
+            }
+          }
+        });
+      }
+
+      // 3. Call Types Doughnut
+      const callTypeCanvas = document.getElementById('reportCallTypeChart');
+      if (callTypeCanvas) {
+        let typeLabels = ['Incoming', 'Outgoing', 'SMS'];
+        let typeCounts = [
+          (DATA.kpis && DATA.kpis.incoming) || 0,
+          (DATA.kpis && DATA.kpis.outgoing) || 0,
+          (DATA.kpis && DATA.kpis.sms_count) || 0
+        ];
+
+        new Chart(callTypeCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: typeLabels,
+            datasets: [{
+              data: typeCounts,
+              backgroundColor: ['#059669', '#0284c7', '#818cf8'],
+              borderColor: '#ffffff',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'right', labels: { font: { size: 10 } } }
+            }
+          }
+        });
+      }
+
+      // 4. Top Contacts Horizontal Bar
+      const topContactsCanvas = document.getElementById('reportTopContactsChart');
+      if (topContactsCanvas && DATA.top_contacts) {
+        const top5 = (DATA.top_contacts || []).slice(0, 5);
+        const contactLabels = top5.map(c => c.contact || 'Unknown');
+        const contactCalls = top5.map(c => c.call_count !== undefined ? c.call_count : (c.count || 0));
+
+        new Chart(topContactsCanvas, {
+          type: 'bar',
+          indexAxis: 'y',
+          data: {
+            labels: contactLabels,
+            datasets: [{
+              label: 'Calls',
+              data: contactCalls,
+              backgroundColor: '#d97706',
+              borderRadius: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 9 } } },
+              y: { grid: { display: false }, ticks: { font: { size: 9, family: 'monospace' } } }
+            }
+          }
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // MULTI-TARGET CROSS-MATCH GRAPHS
+    // ─────────────────────────────────────────────────────────────────
+    else {
+      const colors = ['#0284c7', '#059669', '#d97706', '#dc2626', '#6366f1'];
+      const targets = DATA.targets || [];
+      const individuals = DATA.individuals || [];
+
+      // 1. Cross-Match Hourly Overlay Curve
+      const crossHourlyCanvas = document.getElementById('crossHourlyChart');
+      if (crossHourlyCanvas) {
+        const hours = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0') + ':00');
+        const datasets = individuals.map((ind, idx) => {
+          const hourMap = new Map((ind.hourly || []).map(h => [h.hour, h.count]));
+          const data = Array.from({length: 24}, (_, i) => hourMap.get(i) || 0);
+          const col = colors[idx % colors.length];
+          return {
+            label: ind.target || `Target ${idx+1}`,
+            data: data,
+            borderColor: col,
+            backgroundColor: col + '20',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            pointRadius: 2
+          };
+        });
+
+        new Chart(crossHourlyCanvas, {
+          type: 'line',
+          data: { labels: hours, datasets: datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 9 } } } },
+            scales: {
+              x: { grid: { display: false }, ticks: { font: { size: 8 } } },
+              y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 9 } } }
+            }
+          }
+        });
+      }
+
+      // 2. Cross-Match Weekly Radar Overlay
+      const crossDowCanvas = document.getElementById('crossDowChart');
+      if (crossDowCanvas) {
+        const dows = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const datasets = individuals.map((ind, idx) => {
+          const dowMap = new Map((ind.dow || []).map(d => [d.dow, d.count]));
+          const col = colors[idx % colors.length];
+          return {
+            label: ind.target || `Target ${idx+1}`,
+            data: dows.map(d => dowMap.get(d) || 0),
+            borderColor: col,
+            backgroundColor: col + '25',
+            borderWidth: 2
+          };
+        });
+
+        new Chart(crossDowCanvas, {
+          type: 'radar',
+          data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], datasets: datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 9 } } } },
+            scales: { r: { grid: { color: '#e2e8f0' }, ticks: { backdropColor: 'transparent', font: { size: 8 } } } }
+          }
+        });
+      }
+
+      // 3. Cross-Match Type Grouped Bar
+      const crossTypeCanvas = document.getElementById('crossTypeChart');
+      if (crossTypeCanvas) {
+        const categories = ['Incoming', 'Outgoing', 'SMS', 'Night Calls'];
+        const datasets = individuals.map((ind, idx) => {
+          const k = ind.kpis || {};
+          const col = colors[idx % colors.length];
+          return {
+            label: ind.target || `Target ${idx+1}`,
+            data: [k.incoming || 0, k.outgoing || 0, k.sms_count || 0, k.night_calls || 0],
+            backgroundColor: col,
+            borderRadius: 3
+          };
+        });
+
+        new Chart(crossTypeCanvas, {
+          type: 'bar',
+          data: { labels: categories, datasets: datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 9 } } } },
+            scales: {
+              x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+              y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 9 } } }
+            }
+          }
+        });
+      }
+
+      // 4. Cross-Match Forensic Threat Radar
+      const crossRiskCanvas = document.getElementById('crossRiskChart');
+      if (crossRiskCanvas) {
+        const riskLabels = ['Night Ratio %', 'Handset Swaps', 'Travel Anomalies', 'Contact Breadth', 'SMS Volume'];
+        const datasets = individuals.map((ind, idx) => {
+          const k = ind.kpis || {};
+          const total = k.total_records || 1;
+          const nightPct = Math.min(100, Math.round(((k.night_calls || 0) / total) * 100));
+          const swaps = (ind.device_swaps && ind.device_swaps.imei_count) || 1;
+          const travel = (ind.impossible_travel || []).length;
+          const contacts = Math.min(100, (k.unique_contacts || 0));
+          const sms = Math.min(100, (k.sms_count || 0));
+          const col = colors[idx % colors.length];
+
+          return {
+            label: ind.target || `Target ${idx+1}`,
+            data: [nightPct, swaps * 20, travel * 30, contacts, sms],
+            borderColor: col,
+            backgroundColor: col + '25',
+            borderWidth: 2
+          };
+        });
+
+        new Chart(crossRiskCanvas, {
+          type: 'radar',
+          data: { labels: riskLabels, datasets: datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 9 } } } },
+            scales: { r: { max: 100, min: 0, grid: { color: '#e2e8f0' }, ticks: { backdropColor: 'transparent', font: { size: 8 } } } }
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>
